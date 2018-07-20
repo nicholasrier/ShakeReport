@@ -11,6 +11,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -24,9 +26,12 @@ import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -67,6 +72,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
     boolean isFABOpen=false;
+    boolean isKeyboardOpen = false;
 
     RelativeLayout relativeLayout;
     RelativeLayout.LayoutParams RLparams;
@@ -74,6 +80,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private int drawIconID;
     private int squareIconID;
     private int textIconID;
+    private int savedIconID;
 
     public int currentColor;
     private int selectedColor;
@@ -81,6 +88,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private boolean isDrawSelected = true;
     private boolean isShapesSelected = false;
     private boolean isTextSelected = false;
+
+    private boolean isShapeSaved = false;
+    private boolean isDrawSaved  = false;
+
     private View.OnTouchListener handleTouch;
 
     private Paint mPaint;
@@ -89,6 +100,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private static final int black = Color.parseColor("#000000");
     private static final int blue = Color.parseColor("#519ACC");
 
+    private InputMethodManager imm;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,14 +108,14 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         setContentView(R.layout.activity_screen_shot_mark_up);
 
         //Set up toolbar
-        mTopToolbar = (Toolbar) findViewById(R.id.my_toolbar);
+        mTopToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(mTopToolbar);
 
 
         //load screenshot into screenShotImageView
         screenShotView = new ImageViewTouchWithDraw(this.getApplicationContext(), null);
 
-        screenShotView.setId(screenShotView.generateViewId());
+        screenShotView.setId(View.generateViewId());
         LinearLayout.LayoutParams lp =  new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT);
 
@@ -119,6 +131,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
         screenShotView.setImageBitmap(screenShotBM);
+
+
 
         Paint currentPaint = new Paint();
         currentPaint.setAntiAlias(true);
@@ -153,10 +167,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         currentColor = green;
         selectedColor = green;
 
-        relativeLayout = (RelativeLayout) findViewById(R.id.ETLayout);
-//        RLparams = (RelativeLayout.LayoutParams) relativeLayout.getLayoutParams();
+        imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        relativeLayout = findViewById(R.id.ETLayout);
 
         fabBGLayout = findViewById(R.id.fabBGLayout);
+
         fabCurrentTool.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -176,7 +192,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 }
             }
         });
-        toggleNavigation(true);
+        //set initial color
         selectColor();
     }
 
@@ -226,7 +242,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     }
 
                     @Override
-                    public byte[] getBody() throws AuthFailureError {
+                    public byte[] getBody() {
                         try {
                             return requestBody == null ? null : requestBody.getBytes("utf-8");
                         } catch (UnsupportedEncodingException uee) {
@@ -243,7 +259,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         Context context = getApplicationContext();
                         int duration = Toast.LENGTH_SHORT;
 
-                        if (response != null) {
+                        if (null != response) {
                             responseString = String.valueOf(response.statusCode);
                             if(responseString.equals("200")) {
                                 text = "Report Sent!";
@@ -312,12 +328,41 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabLayoutText.animate().translationY(-getResources().getDimension(R.dimen.standard_145));
         fabLayoutRed.animate().translationX(-120);
         fabLayoutGreen.animate().translationX(-240);
-        fabLayoutBlack.animate().translationX(-360);
+        fabLayoutBlack.animate().translationX(-360).setListener(new Animator.AnimatorListener() {
+
+            @Override
+            public void onAnimationStart(Animator animator) {
+                fabLayoutDraw.setVisibility(View.VISIBLE);
+                fabLayoutShapes.setVisibility(View.VISIBLE);
+                fabLayoutText.setVisibility(View.VISIBLE);
+                fabLayoutRed.setVisibility(View.VISIBLE);
+                fabLayoutGreen.setVisibility(View.VISIBLE);
+                fabLayoutBlack.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
     }
 
     private void closeFABMenu(){
         isFABOpen=false;
+
+
         fabBGLayout.setVisibility(View.GONE);
+
         fabLayoutRed.animate().translationX(0);
         fabLayoutGreen.animate().translationX(0);
         fabLayoutBlack.animate().translationX(0);
@@ -340,6 +385,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     fabLayoutRed.setVisibility(View.GONE);
                     fabLayoutGreen.setVisibility(View.GONE);
                     fabLayoutBlack.setVisibility(View.GONE);
+
+                    if (!isTextSelected) {
+                        deselectView(getCurrentFocus());
+                    }
                 }
             }
 
@@ -353,6 +402,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             }
         });
+
     }
 
     @Override
@@ -366,11 +416,13 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public void tapDraw(View view) {
         if(isFABOpen){
-            isDrawSelected = true;
+            isDrawSaved = false;
+            isShapeSaved = false;
+            isDrawSelected = false;
             isTextSelected = false;
             isShapesSelected = false;
+            isDrawSelected = true;
             closeFABMenu();
-            toggleNavigation(false);
             fabCurrentTool.setImageResource(drawIconID);
         }
     }
@@ -378,9 +430,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     public void tapText(View view) {
         if(isFABOpen) {
             isDrawSelected = false;
-            isTextSelected = true;
+            isTextSelected = false;
             isShapesSelected = false;
-            toggleNavigation(false);
+            isDrawSaved = false;
+            isShapeSaved = false;
+            isTextSelected = true;
+
             closeFABMenu();
             fabCurrentTool.setImageResource(textIconID);
         }
@@ -388,10 +443,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public void tapShapes (View view) {
         if(isFABOpen) {
+            isDrawSaved = false;
+            isShapeSaved = false;
             isDrawSelected = false;
             isTextSelected = false;
+            isShapesSelected = false;
             isShapesSelected = true;
-            toggleNavigation(false);
             closeFABMenu();
             fabCurrentTool.setImageResource(squareIconID);
 
@@ -424,7 +481,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public void selectColor() {
         //implement later -- use four colors - don't display active color in color options
-        //probably should use the predefined sizes for dynamic sizing
 
         ObjectAnimator animator = ObjectAnimator.ofInt(fabCurrentTool,
                                                       "backgroundTint",
@@ -451,10 +507,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 ColorStateList myList = new ColorStateList(states, colors);
                 int animatedValue = (int) animation.getAnimatedValue();
-                fabCurrentTool.setBackgroundTintList(myList.valueOf( animatedValue));
-                fabDrawTool.setBackgroundTintList(myList.valueOf( animatedValue));
-                fabShapesTool.setBackgroundTintList(myList.valueOf( animatedValue));
-                fabTextTool.setBackgroundTintList(myList.valueOf( animatedValue));
+                fabCurrentTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
+                fabDrawTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
+                fabShapesTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
+                fabTextTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
             }
         });
         animator.start();
@@ -462,19 +518,79 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         currentColor = selectedColor;
     }
 
-    private void toggleNavigation(boolean toggle) {
-//        screenShotView.setScaleEnabled(toggle);
-//        screenShotView.setScrollEnabled(toggle);
-//        //seems to deactivate double tap zoom-- rolling with it
-//        screenShotView.setQuickScaleEnabled(!toggle);
+    public void deselectView(View v) {
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        }
+        v.clearFocus();
     }
+
+    //Spins fab when switching between text and tools
+    public void spinSwitch(final boolean hasFocus) {
+
+        float rotation;
+        if (hasFocus) //keyboard is opening, spin
+            rotation = 360 - fabCurrentTool.getRotation() ;
+        else //keyboard closing, un-rotate
+            rotation = -fabCurrentTool.getRotation();
+
+        fabCurrentTool.animate().rotationBy(rotation).setListener(new Animator.AnimatorListener() {
+            @Override // timing button animation with keyboard movement
+            public void onAnimationStart(Animator animation) {
+                if (hasFocus) {
+                    if (isTextSelected)
+                        fabCurrentTool.setImageResource(textIconID);
+                } else {
+                    if (isDrawSaved)
+                        fabCurrentTool.setImageResource(drawIconID);
+
+                    if (isShapeSaved)
+                        fabCurrentTool.setImageResource(squareIconID);
+                }
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (!hasFocus) {
+                    if (isDrawSaved || isShapeSaved) {
+                        deselectView(getCurrentFocus());
+                        isDrawSaved = false;
+                        isShapeSaved = false;
+                    }
+                }
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animation) {
+
+            }
+        });
+        if (!hasFocus) {
+            if (isDrawSaved) {
+                isShapesSelected = false;
+                isTextSelected = false;
+                isDrawSelected = true;
+            }
+            if (isShapeSaved) {
+                isDrawSelected = false;
+                isTextSelected = false;
+                isShapesSelected = true;
+            }
+        }
+    }
+
+
 
     public class ImageViewTouchWithDraw extends android.support.v7.widget.AppCompatImageView {
 
         private Bitmap  mBitmap;
         private Canvas mCanvas;
         private Path    mPath;
-        private Paint   mBitmapPaint;
         int firstPointerIndex = -1;
         int firstPointerID = -1;
         Context context;
@@ -504,12 +620,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         /** Stores data about single circle */
         private class CircleArea {
-            int radius;
-            int centerX;
-            int centerY;
+            float radius;
+            float centerX;
+            float centerY;
             Paint paint;
 
-            CircleArea(int centerX, int centerY, int radius, Paint paint) {
+            CircleArea(float centerX, float centerY, float radius, Paint paint) {
                 this.radius = radius;
                 this.centerX = centerX;
                 this.centerY = centerY;
@@ -527,6 +643,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             context=c;
             mPath = new Path();
             setSelectedPaint(green);
+            mScaleGestureDetector = new ScaleGestureDetector(getApplicationContext(), new ScaleListener());
 
         }
 
@@ -545,9 +662,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            canvas.drawBitmap(mBitmap, 0, 0, mBitmapPaint);
+            canvas.drawBitmap(mBitmap, 0, 0, null);
             //Draw free-draws
+
             canvas.drawPath(mPath, selectedPaint);
+
             //Draw circles
             for (CircleArea circle : mCircles) {
                 canvas.drawCircle(circle.centerX, circle.centerY, circle.radius, circle.paint);
@@ -558,6 +677,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         private float mX, mY;
         private static final float TOUCH_TOLERANCE = 4;
         private EditText ET;
+        private boolean dontMove = false;
+        private ScaleGestureDetector mScaleGestureDetector;
+        private float mScaleFactor = 1.0f;
+        private float previousScaleFactor = 1.0f;
         @Override
         public boolean onTouchEvent(MotionEvent event) {
 
@@ -566,7 +689,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             final float y = event.getY();
             int index = event.getActionIndex();
             int currentPointerId = event.getPointerId(index);
+            final View currentView = getCurrentFocus();
             final int action = event.getAction();
+
+
+            mScaleGestureDetector.onTouchEvent(event);
+
             switch (action & MotionEvent.ACTION_MASK) {
 //                if (isDrawSelected) {
 //
@@ -579,6 +707,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 case MotionEvent.ACTION_DOWN:
 
                     if (isDrawSelected) {
+                        if (dontMove) {
+                            mPath.reset();
+                            mPath.moveTo(x, y);
+                            mX = x;
+                            mY = y;
+                            dontMove = false;
+                            deselectView(currentView);
+                            invalidate();
+                            break;
+                        }
                         mPath.reset();
                         mPath.moveTo(x, y);
                         mX = x;
@@ -586,58 +724,139 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     } else if (isShapesSelected) {
                         mCirclePointer.clear();
-
+                        mX = x;
+                        mY = y;
                         // check if we've touched inside some circle
-                        touchedCircle = obtainTouchedCircle((int)x, (int)y);
+                        touchedCircle = obtainTouchedCircle(x, y);
                         mCirclePointer.put(event.getPointerId(0), touchedCircle);
 
                     } else if (isTextSelected) {
-                        ET = new EditText(getApplicationContext());
-                        ET.setBackgroundColor(Color.TRANSPARENT);
-                        ET.setTextColor(selectedPaint.getColor());
-                        ET.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-                        int w = relativeLayout.getWidth() - (int)x;
-                        int h = (int)y - relativeLayout.getHeight();
+                        // If in an ET already, clear focus. Else, make a new one.
+                        if (currentView instanceof EditText) {
 
-                        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
-                        params.leftMargin = (int) x;
-                        params.topMargin = (int) y - 60;
-                        relativeLayout.addView(ET, params);
-                        ET.requestFocus();
-                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.showSoftInput(ET, InputMethodManager.SHOW_IMPLICIT);
+//                            deselectView(currentView);
+                            currentView.clearFocus();
+
+                        } else {
+                            // make an EditText and put it in a layout
+                            ET = new EditText(getApplicationContext());
+                            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                            params.leftMargin = (int) x;
+                            params.topMargin = (int) y - 60;
+                            relativeLayout.addView(ET, params);
+
+                            // set up the EditText
+                            ET.requestFocus();
+                            ET.setVisibility(VISIBLE);
+                            ET.setTextColor(selectedPaint.getColor());
+                            ET.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+                            ET.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+                            ET.setText(" ");
+                            ET.setTag(x + " " + y);
+                            ET.setOnLongClickListener(new EditText.OnLongClickListener() {
+
+                                @Override
+                                public boolean onLongClick(View v) {
+//                                    v.startDrag(dragData,  // the data to be dragged
+//                                            myShadow,  // the drag shadow builder
+//                                            null,      // no need to use local data
+//                                            0          // flags (not currently used, set to 0)
+//                                    );
+                                    return false;
+                                }
+                            });
+
+                            ET.setOnFocusChangeListener(new OnFocusChangeListener() {
+                                @Override
+                                public void onFocusChange(View v, boolean hasFocus) {
+                                    if (hasFocus) { // if opening keyboard
+                                        if (!isTextSelected) {
+                                            if (isDrawSelected) {
+                                                isDrawSelected = false;
+                                                isDrawSaved = true;
+                                            }
+                                            if (isShapesSelected) {
+                                                isShapesSelected = false;
+                                                isShapeSaved = true;
+                                            }
+                                            isTextSelected = true;
+
+                                            spinSwitch(true);
+                                        }
+
+                                    } else { // if closing keyboard
+                                        // Return to previous tool
+                                        if (isDrawSaved || isShapeSaved) {
+                                            //prevents drawing when deselecting text
+                                            dontMove = true;
+                                            //animate button and switch icons
+                                            spinSwitch(false);
+
+                                        } else {
+                                            // Previous tool was text
+                                            if (isTextSelected)
+                                                deselectView(v);
+                                        }
+
+                                    }
+                                }
+                            });
+
+                            // force open the keyboard
+                            if (imm != null) {
+                                imm.showSoftInput(ET, InputMethodManager.SHOW_IMPLICIT);
+                            }
+                        }
 
                     }
+
                     invalidate();
                     firstPointerIndex = event.getActionIndex();
                     firstPointerID = event.getPointerId(firstPointerIndex);
                     break;
 
                 case MotionEvent.ACTION_MOVE:
+
                     if (isDrawSelected) {
+                        if (dontMove) {
+                            break;
+                        }
                         if (currentPointerId == firstPointerID) {
                             float dx = Math.abs(x - mX);
                             float dy = Math.abs(y - mY);
                             if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
-                                mPath.quadTo(mX, mY, (x + mX)/2, (y + mY)/2);
+                                mPath.quadTo(mX, mY, (x + mX) / 2, (y + mY) / 2);
                                 mX = x;
                                 mY = y;
                             }
                         }
+
                     } else if (isShapesSelected) {
                         if (currentPointerId == firstPointerID) {
                             final int pointerCount = event.getPointerCount();
-                            for (index = 0; index < pointerCount; index++) {
-                                // Some pointer has moved, search it by pointer id
-                                currentPointerId = event.getPointerId(index);
+//                            for (index = 0; index < pointerCount; index++) {
+                            // Some pointer has moved, search it by pointer id
+                            currentPointerId = event.getPointerId(index);
 
-                                touchedCircle = mCirclePointer.get(currentPointerId);
+                            touchedCircle = mCirclePointer.get(currentPointerId);
+                            float centerX = touchedCircle.centerX;
+                            float centerY = touchedCircle.centerY;
+                            if (null != touchedCircle) {
 
-                                if (null != touchedCircle) {
-                                    touchedCircle.centerX = (int) x;
-                                    touchedCircle.centerY = (int) y;
-                                }
+                                float offsetX = 0;
+                                float offsetY = 0;
+                                if ((x > mX + 4) || (x < mX - 4))
+                                    offsetX = x - mX;
+
+                                if ((y > mY + 4) || (y < mY - 4))
+                                    offsetY = y - mY;
+
+                                touchedCircle.centerX = touchedCircle.centerX + offsetX;
+                                touchedCircle.centerY = touchedCircle.centerY + offsetY;
+                                mX = x;
+                                mY = y;
                             }
+//                            }
                         }
                     } else if (isTextSelected) {
 
@@ -647,10 +866,15 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     break;
 
                 case MotionEvent.ACTION_UP:
+
                     if (isDrawSelected) {
+                        if (dontMove) {
+                            break;
+                        }
                         mPath.lineTo(mX, mY);
                         mCanvas.drawPath(mPath, selectedPaint);
                         mPath.reset();
+
                     } else if (isShapesSelected) {
                         mCirclePointer.clear();
                     } else if (isTextSelected) {
@@ -662,7 +886,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     break;
 
                 case MotionEvent.ACTION_POINTER_UP:
+
                     if (isDrawSelected) {
+                        if (dontMove) {
+                            break;
+                        }
                         firstPointerID = -1;
                     } else if (isShapesSelected) {
                         currentPointerId = event.getPointerId(index);
@@ -673,17 +901,18 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     }
 
             }
+
             return true;
         }
 
-        private CircleArea obtainTouchedCircle(final int xTouch, final int yTouch) {
+        private CircleArea obtainTouchedCircle(final float xTouch, final float yTouch) {
             CircleArea touchedCircle = getTouchedCircle(xTouch, yTouch);
 
             if (null == touchedCircle) {
                 touchedCircle = new CircleArea(xTouch, yTouch, 200, selectedPaint);
 
                 if (mCircles.size() == CIRCLES_LIMIT) {
-                    // remove first circle
+                    // remove last circle
                     mCircles.remove(lastCA);
                 }
 
@@ -693,7 +922,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             return touchedCircle;
         }
-        private CircleArea getTouchedCircle(final int xTouch, final int yTouch) {
+        private CircleArea getTouchedCircle(final float xTouch, final float yTouch) {
             CircleArea touched = null;
 
             for (CircleArea circle : mCircles) {
@@ -704,6 +933,32 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             return touched;
+        }
+
+        private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+            @Override
+            public boolean onScale(ScaleGestureDetector scaleGestureDetector){
+
+                if (isShapesSelected) {
+                    CircleArea touchedCircle = getTouchedCircle(scaleGestureDetector.getFocusX(), scaleGestureDetector.getFocusY());
+
+                    if (touchedCircle != null) {
+
+//                        mScaleFactor = Math.max(0.8f, Math.min(mScaleFactor, 1.2f));
+                        //max and min radius condition
+//                        if ((mScaleFactor < (previousScaleFactor - 0.05f)) || (mScaleFactor > (previousScaleFactor + 0.05f)))
+                            if ((scaleGestureDetector.getCurrentSpan() <= touchedCircle.radius * 2) &&
+                                (mCanvas.getWidth() >= touchedCircle.radius * 2) &&
+                                (touchedCircle.radius >= 100)) {
+                                mScaleFactor *= scaleGestureDetector.getScaleFactor();
+                                touchedCircle.radius *= mScaleFactor;
+                            }
+
+                    }
+                }
+//                previousScaleFactor = mScaleFactor;
+                return true;
+            }
         }
     }
 }

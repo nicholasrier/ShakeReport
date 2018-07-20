@@ -6,7 +6,9 @@
     android:id="@+id/coordinatorLayout01"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ScreenShotMarkUp">
+    tools:context=".ScreenShotMarkUp"
+    android:focusableInTouchMode="true"
+    android:focusable="true">
 
     <android.support.v7.widget.Toolbar
         xmlns:android="http://schemas.android.com/apk/res/android"
@@ -18,19 +20,45 @@
         android:layout_height="wrap_content"
         android:minHeight="?attr/actionBarSize"
         android:elevation="4dp"
-        style="@style/AppTheme"/>
+        style="@style/AppTheme" >
 
-    <LinearLayout
-        android:id="@+id/screenshotLayout"
+    <!--<ImageView-->
+        <!--android:id="@+id/bc_logo"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_gravity="center"-->
+        <!--android:src="@drawable/ic_bc_logo"-->
+        <!--android:scaleType="fitXY"-->
+        <!--tools:ignore="ContentDescription" />-->
+
+    </android.support.v7.widget.Toolbar>
+
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:adjustViewBounds="true"></LinearLayout>
+        android:scrollbars="none"
+        android:overScrollMode="never"
 
-    <RelativeLayout
-        android:id="@+id/ETLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"></RelativeLayout>
+        xmlns:android="http://schemas.android.com/apk/res/android">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <LinearLayout
+                android:id="@+id/screenshotLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:adjustViewBounds="true" />
+
+            <RelativeLayout
+                android:id="@+id/ETLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+            </RelativeLayout>
+        </RelativeLayout>
+    </ScrollView>
 
     <include layout="@layout/content_screenshotmarkup" />
 

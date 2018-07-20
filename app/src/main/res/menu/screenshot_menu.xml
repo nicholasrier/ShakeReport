@@ -9,6 +9,6 @@
         android:orderInCategory="300"
         android:title="User"
         android:icon="@drawable/ic_done_white_24dp"
-        app:showAsAction="ifRoom"></item>
+        app:showAsAction="ifRoom" />
 
 </menu>
