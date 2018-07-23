@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
@@ -839,10 +840,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             currentPointerId = event.getPointerId(index);
 
                             touchedCircle = mCirclePointer.get(currentPointerId);
-                            float centerX = touchedCircle.centerX;
-                            float centerY = touchedCircle.centerY;
-                            if (null != touchedCircle) {
 
+                            if (touchedCircle != null) {
                                 float offsetX = 0;
                                 float offsetY = 0;
                                 if ((x > mX + 4) || (x < mX - 4))
@@ -936,23 +935,43 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
 
         private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+
+            private PointF viewportFocus = new PointF();
+            private float lastSpanX;
+            private float lastSpanY;
+            private float lastSpan;
+            private float lastRadius;
+            private CircleArea touchedCircle;
+
+            @Override
+            public boolean onScaleBegin(ScaleGestureDetector scaleGestureDetector) {
+
+                touchedCircle = getTouchedCircle(scaleGestureDetector.getFocusX(), scaleGestureDetector.getFocusY());
+                if (touchedCircle != null) {
+                    lastRadius = touchedCircle.radius;
+                    lastSpan = scaleGestureDetector.getCurrentSpan();
+                }
+
+                return true;
+            }
+
             @Override
             public boolean onScale(ScaleGestureDetector scaleGestureDetector){
 
                 if (isShapesSelected) {
-                    CircleArea touchedCircle = getTouchedCircle(scaleGestureDetector.getFocusX(), scaleGestureDetector.getFocusY());
+//                    touchedCircle = getTouchedCircle(scaleGestureDetector.getFocusX(), scaleGestureDetector.getFocusY());
 
                     if (touchedCircle != null) {
+                        float diameterDiff = scaleGestureDetector.getCurrentSpan() - lastSpan;
+                        boolean scalingUp = diameterDiff > 0;
 
-//                        mScaleFactor = Math.max(0.8f, Math.min(mScaleFactor, 1.2f));
-                        //max and min radius condition
-//                        if ((mScaleFactor < (previousScaleFactor - 0.05f)) || (mScaleFactor > (previousScaleFactor + 0.05f)))
-                            if ((scaleGestureDetector.getCurrentSpan() <= touchedCircle.radius * 2) &&
-                                (mCanvas.getWidth() >= touchedCircle.radius * 2) &&
-                                (touchedCircle.radius >= 100)) {
-                                mScaleFactor *= scaleGestureDetector.getScaleFactor();
-                                touchedCircle.radius *= mScaleFactor;
-                            }
+                        if ((scaleGestureDetector.getCurrentSpan() <= touchedCircle.radius * 2) &&
+                            (!scalingUp && lastRadius >= 150) || (scalingUp && lastRadius < 400)) {
+
+                            touchedCircle.radius += (diameterDiff)/2;
+                            lastRadius = touchedCircle.radius;
+                            lastSpan = scaleGestureDetector.getCurrentSpan();
+                        }
 
                     }
                 }
