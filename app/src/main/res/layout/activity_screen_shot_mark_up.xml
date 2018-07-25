@@ -22,15 +22,6 @@
         android:elevation="4dp"
         style="@style/AppTheme" >
 
-    <!--<ImageView-->
-        <!--android:id="@+id/bc_logo"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:layout_gravity="center"-->
-        <!--android:src="@drawable/ic_bc_logo"-->
-        <!--android:scaleType="fitXY"-->
-        <!--tools:ignore="ContentDescription" />-->
-
     </android.support.v7.widget.Toolbar>
 
     <ScrollView
@@ -69,6 +60,7 @@
         android:background="@color/colorTransBg"
         android:visibility="gone" />
 
+    <!--Draw tool-->
     <LinearLayout
         android:id="@+id/fabLayout1"
         android:layout_width="wrap_content"
@@ -91,6 +83,7 @@
             app:srcCompat="@drawable/ic_mode_edit_white_24dp" />
     </LinearLayout>
 
+    <!--Shapes tool-->
     <LinearLayout
         android:id="@+id/fabLayout2"
         android:layout_width="wrap_content"
@@ -112,9 +105,35 @@
             android:tint="@color/color_white"
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_outline_brightness_1_24px" />
+
+    </LinearLayout>
+
+    <!--Shapes options-->
+    <LinearLayout
+        android:id="@+id/fabShapesLayout_option"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="131dp"
+        android:layout_marginEnd="@dimen/standard_23"
+        android:clipToPadding="false"
+        android:gravity="center_vertical"
+        android:padding="@dimen/standard_12"
+        android:visibility="gone">
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab_shapeOption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:tint="@color/color_white"
+            android:onClick="tapShapeOption"
+            app:fabCustomSize="25dp"
+            app:srcCompat="@drawable/ic_sharp_bubble_chart_24px"/>
     </LinearLayout>
 
 
+    <!--Text tool-->
     <LinearLayout
         android:id="@+id/fabLayout3"
         android:layout_width="wrap_content"
@@ -208,7 +227,6 @@
             app:fabCustomSize="25dp"
             app:rippleColor="@color/color_white" />
     </LinearLayout>
-
 
     <LinearLayout
         android:layout_width="wrap_content"
