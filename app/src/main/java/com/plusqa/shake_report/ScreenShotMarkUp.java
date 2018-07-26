@@ -70,11 +70,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     FloatingActionButton fabCurrentTool, fabDrawTool, fabShapesTool, fabShapeOption, fabTextTool;
     FloatingActionButton fabRed, fabGreen, fabBlack;
-    LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText;
+    LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText, fabCurrentToolLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
     boolean isFABOpen=false;
-    boolean isKeyboardOpen = false;
 
     RelativeLayout relativeLayout;
     RelativeLayout.LayoutParams RLparams;
@@ -82,7 +81,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private int drawIconID;
     private int squareIconID;
     private int textIconID;
-    private int savedIconID;
+    private int circlesIconID;
+    private int shapeIconID;
 
     public int currentColor;
     private int selectedColor;
@@ -93,6 +93,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     private boolean isShapeSaved = false;
     private boolean isDrawSaved  = false;
+
+    boolean isShapeOptionVisible = false;
 
     private View.OnTouchListener handleTouch;
 
@@ -137,8 +139,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
         screenShotView.setImageBitmap(screenShotBM);
 
-
-
         Paint currentPaint = new Paint();
         currentPaint.setAntiAlias(true);
         currentPaint.setDither(true);
@@ -149,13 +149,18 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         currentPaint.setStrokeWidth(20);
 
         drawIconID = R.drawable.ic_mode_edit_white_24dp;
-        squareIconID = R.drawable.ic_outline_brightness_1_24px;
+        squareIconID = R.drawable.ic_sharp_crop_square_white_24px;
+        shapeIconID = squareIconID;
+        circlesIconID = R.drawable.ic_sharp_bubble_chart_24px;
         textIconID = R.drawable.ic_text_fields_white_24dp;
+
+
         //FAB tool menu layouts
         fabLayoutDraw = findViewById(R.id.fabLayout1);
         fabLayoutShapes = findViewById(R.id.fabLayout2);
         fabLayoutShapeOption = findViewById(R.id.fabShapesLayout_option);
         fabLayoutText = findViewById(R.id.fabLayout3);
+        fabCurrentToolLayout = findViewById(R.id.fabCurrentToolLayout);
         //FAB color menu layouts
         fabLayoutRed = findViewById(R.id.fabColorLayout_red);
         fabLayoutGreen = findViewById(R.id.fabColorLayout_green);
@@ -195,59 +200,26 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if(isFABOpen) {
-                    closeFABMenu();
+                    if (!isShapeOptionVisible) {
+                        closeFABMenu();
+                    }
                 }
             }
         });
 
-        fabShapesTool.setOnTouchListener(new View.OnTouchListener() {
+        OptionMenuTouchListener shapeOptionTouchListener = new OptionMenuTouchListener();
 
-            boolean isOpen = false;
+        fabShapesTool.setOnTouchListener(shapeOptionTouchListener);
 
+        fabShapeOption.setOnTouchListener(shapeOptionTouchListener);
+
+        fabLayoutShapeOption.setOnClickListener(new View.OnClickListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                final int action = event.getAction();
-
-
-                switch (action & MotionEvent.ACTION_MASK) {
-
-                    case MotionEvent.ACTION_DOWN:
-
-                        fabLayoutShapeOption.animate().translationX(-120).setListener(new Animator.AnimatorListener() {
-                        @Override
-                        public void onAnimationStart(Animator animation) {
-                            fabLayoutShapeOption.setVisibility(View.VISIBLE);
-                        }
-
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            if (isOpen) {
-
-                            }
-                        }
-
-                        @Override
-                        public void onAnimationCancel(Animator animation) {
-                            fabLayoutShapeOption.animate().translationX(0);
-                        }
-
-                        @Override
-                        public void onAnimationRepeat(Animator animation) {
-
-                        }
-                    });
-                        return true;
-
-
-                    case MotionEvent.ACTION_UP:
-                        fabLayoutShapeOption.animate().translationX(0);
-                        fabLayoutShapeOption.setVisibility(View.GONE);
-                        return true;
-
-                }
-                return false;
+            public void onClick(View v) {
+                Log.i("OPTION BUTTON","Option Clicked");
             }
         });
+
 
         //set initial color
         selectColor();
@@ -393,7 +365,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-
+                fabShapeOption.setVisibility(View.VISIBLE);
             }
 
             @Override
@@ -421,7 +393,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             @Override
             public void onAnimationStart(Animator animator) {
-
+                fabShapeOption.setVisibility(View.GONE);
             }
 
             @Override
@@ -442,29 +414,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public void onAnimationCancel(Animator animator) {
-
-            }
-
+            public void onAnimationCancel(Animator animator) { }
             @Override
-            public void onAnimationRepeat(Animator animator) {
-
-            }
+            public void onAnimationRepeat(Animator animator) { }
         });
 
     }
-
-    private void showShapeOptions(){
-        fabLayoutShapeOption.setVisibility(View.VISIBLE);
-        fabLayoutShapeOption.animate().translationX(-120);
-    }
-    private void hideShapeOptions(){
-        fabLayoutShapeOption.animate().translationX(0);
-        fabLayoutShapeOption.setVisibility(View.GONE);
-    }
-
-
-
 
     @Override
     public void onBackPressed() {
@@ -511,7 +466,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             isShapesSelected = false;
             isShapesSelected = true;
             closeFABMenu();
-            fabCurrentTool.setImageResource(squareIconID);
+            fabCurrentTool.setImageResource(shapeIconID);
 
         }
     }
@@ -571,7 +526,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 fabCurrentTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
                 fabDrawTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
                 fabShapesTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
-                fabShapesTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
+                fabShapeOption.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
                 fabTextTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
             }
         });
@@ -607,7 +562,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         fabCurrentTool.setImageResource(drawIconID);
 
                     if (isShapeSaved)
-                        fabCurrentTool.setImageResource(squareIconID);
+                        fabCurrentTool.setImageResource(shapeIconID);
                 }
             }
 
@@ -647,8 +602,70 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     }
 
 
-    public void tapShapeOption(View view) {
-        hideShapeOptions();
+    public class OptionMenuTouchListener implements View.OnTouchListener {
+        boolean isShapesTool = false;
+        boolean isOption = false;
+
+        @SuppressLint("ClickableViewAccessibility")
+        @Override
+        public boolean onTouch(final View v, MotionEvent event) {
+
+            final int action = event.getAction();
+            isShapesTool = v.getId() == fabShapesTool.getId();
+            isOption = v.getId() == fabShapeOption.getId();
+            int x = (int) event.getRawX();
+            int y = (int) event.getRawY();
+            if (isFABOpen) {
+                switch (action) {
+
+                    case MotionEvent.ACTION_DOWN:
+                        isShapeOptionVisible = true;
+                        fabLayoutShapeOption.animate().translationX(-120).setListener(new Animator.AnimatorListener() {
+                            @Override
+                            public void onAnimationStart(Animator a) {
+                                fabLayoutShapeOption.setVisibility(View.VISIBLE);
+                            }
+
+                            @Override
+                            public void onAnimationEnd(Animator a) {
+                                if (isShapeOptionVisible) {
+                                    fabLayoutShapeOption.setVisibility(View.VISIBLE);
+                                } else {
+                                    fabLayoutShapeOption.setVisibility(View.GONE);
+                                    tapShapes(v);
+                                }
+                            }
+
+                            @Override
+                            public void onAnimationCancel(Animator a) {
+                            }
+
+                            @Override
+                            public void onAnimationRepeat(Animator a) {
+                            }
+                        });
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        isShapeOptionVisible = false;
+                        fabLayoutShapeOption.animate().translationX(0);
+                        boolean touchingShapeTool = Utils.isViewInBounds(fabLayoutShapes, x, y);
+                        boolean touchingOption = Utils.isViewInBounds(fabLayoutShapeOption, x, y);
+
+                        if (!touchingShapeTool && touchingOption) {
+
+                            fabShapeOption.setImageResource(shapeIconID);
+                            shapeIconID = (shapeIconID == squareIconID) ? circlesIconID : squareIconID;
+                            fabShapesTool.setImageResource(shapeIconID);
+                        } else if (!touchingShapeTool && !touchingOption) {
+
+                        }
+
+                        break;
+                }
+            }
+            return true;
+        }
     }
 
 
@@ -662,7 +679,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         Context context;
         private static final int CIRCLES_LIMIT = 10;
         private Paint selectedPaint;
-        private CircleArea lastCA;
         private ArrayList<EditText> editTextList = new ArrayList<>(10);
         private CircleArea touchedCircle;
 
@@ -774,12 +790,14 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             invalidate();
                             break;
                         }
+                        fabCurrentTool.hide();
                         mPath.reset();
                         mPath.moveTo(x, y);
                         mX = x;
                         mY = y;
 
                     } else if (isShapesSelected) {
+                        fabCurrentTool.hide();
                         mX = x;
                         mY = y;
                         // check if we've touched inside some circle
@@ -862,6 +880,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         if (dontMove) {
                             break;
                         }
+
                         if (currentPointerId == firstPointerID) {
                             float dx = Math.abs(x - mX);
                             float dy = Math.abs(y - mY);
@@ -876,6 +895,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         if (currentPointerId == firstPointerID) {
 
                             if (touchedCircle != null) {
+
                                 float offsetX = 0;
                                 float offsetY = 0;
                                 if ((x > mX) || (x < mX))
@@ -898,7 +918,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     break;
 
                 case MotionEvent.ACTION_UP:
-
+                    fabCurrentTool.show();
                     if (isDrawSelected) {
                         if (dontMove) {
                             break;
@@ -921,7 +941,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     break;
 
                 case MotionEvent.ACTION_POINTER_UP:
-
+                    if (isDrawSelected)
+                        fabCurrentTool.show();
                     if (isDrawSelected) {
                         if (dontMove) {
                             break;
@@ -932,6 +953,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     } else if (isTextSelected) {
 
                     }
+                    invalidate();
+                    break;
 
             }
 
@@ -949,7 +972,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     mCircles.remove(0);
                 }
 
-                lastCA = touchedCircle;
                 mCircles.add(touchedCircle);
             }
 

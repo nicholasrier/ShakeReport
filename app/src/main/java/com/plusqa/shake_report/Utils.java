@@ -145,4 +145,29 @@ public class Utils {
         return imm != null && imm.isActive();
 
     }
+
+    public static Rect getViewRect(View v) {
+        Rect r = new Rect();
+        int[] location = new int[2];
+        v.getDrawingRect(r);
+        v.getLocationOnScreen(location);
+        r.offset(location[0], location[1]);
+
+        return r;
+    }
+
+    public static boolean isViewInBounds(View v, int x, int y){
+        Rect r = new Rect();
+        int[] location = new int[2];
+        v.getDrawingRect(r);
+        v.getLocationOnScreen(location);
+        r.offset(location[0], location[1]);
+        return r.contains(x, y);
+    }
+
+    public static boolean isCircleTouchingFab(Rect rect, int radius, int centerX, int centerY){
+        rect.inset(-radius, -radius);
+        return (rect.contains(centerX, centerY));
+    }
+
 }
