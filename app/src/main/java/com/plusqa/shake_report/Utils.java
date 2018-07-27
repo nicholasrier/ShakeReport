@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+
 public class Utils {
 
     public static void saveBitmap(Context context, String imageName, Bitmap b) {
@@ -169,5 +171,6 @@ public class Utils {
         rect.inset(-radius, -radius);
         return (rect.contains(centerX, centerY));
     }
+
 
 }

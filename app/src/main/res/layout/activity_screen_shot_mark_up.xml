@@ -90,8 +90,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginBottom="131dp"
-        android:layout_marginEnd="@dimen/standard_23"
+        android:layout_marginBottom="127dp"
+        android:layout_marginEnd="20dp"
         android:clipToPadding="false"
         android:gravity="center_vertical"
         android:padding="@dimen/standard_12"
@@ -103,8 +103,8 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="10dp"
             android:tint="@color/color_white"
-            app:fabCustomSize="30dp"
-            app:srcCompat="@drawable/ic_sharp_bubble_chart_24px"/>
+            app:fabCustomSize="32dp"
+            app:srcCompat="@drawable/ic_sharp_bubble_chart_24px" />
     </LinearLayout>
 
 
@@ -117,7 +117,7 @@
         android:layout_marginBottom="@dimen/standard_23"
         android:layout_marginEnd="@dimen/standard_23"
         android:clipToPadding="false"
-        android:gravity="center_vertical"
+        android:gravity="center_horizontal"
         android:padding="@dimen/standard_12"
         android:visibility="gone">
 

@@ -5,16 +5,14 @@ import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Point;
 import android.graphics.PointF;
-import android.graphics.Rect;
+import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -24,24 +22,18 @@ import android.support.v7.widget.Toolbar;
 import android.text.InputType;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.ViewTreeObserver;
-import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
-import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -57,9 +49,6 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.HashSet;
-
-import it.sephiroth.android.library.imagezoom.ImageViewTouch;
 
 
 public class ScreenShotMarkUp extends AppCompatActivity {
@@ -605,7 +594,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     public class OptionMenuTouchListener implements View.OnTouchListener {
         boolean isShapesTool = false;
         boolean isOption = false;
-
+        boolean doNothing = false;
         @SuppressLint("ClickableViewAccessibility")
         @Override
         public boolean onTouch(final View v, MotionEvent event) {
@@ -620,7 +609,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     case MotionEvent.ACTION_DOWN:
                         isShapeOptionVisible = true;
-                        fabLayoutShapeOption.animate().translationX(-120).setListener(new Animator.AnimatorListener() {
+                        fabLayoutShapeOption.animate().translationX(-130).setListener(new Animator.AnimatorListener() {
                             @Override
                             public void onAnimationStart(Animator a) {
                                 fabLayoutShapeOption.setVisibility(View.VISIBLE);
@@ -632,24 +621,24 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                                     fabLayoutShapeOption.setVisibility(View.VISIBLE);
                                 } else {
                                     fabLayoutShapeOption.setVisibility(View.GONE);
-                                    tapShapes(v);
+                                    if (!doNothing) {
+                                        tapShapes(v);
+                                    }
+
                                 }
                             }
 
                             @Override
-                            public void onAnimationCancel(Animator a) {
-                            }
-
+                            public void onAnimationCancel(Animator a) { }
                             @Override
-                            public void onAnimationRepeat(Animator a) {
-                            }
+                            public void onAnimationRepeat(Animator a) { }
                         });
                         break;
 
                     case MotionEvent.ACTION_UP:
                         isShapeOptionVisible = false;
                         fabLayoutShapeOption.animate().translationX(0);
-                        boolean touchingShapeTool = Utils.isViewInBounds(fabLayoutShapes, x, y);
+                        boolean touchingShapeTool = Utils.isViewInBounds(fabShapesTool, x, y);
                         boolean touchingOption = Utils.isViewInBounds(fabLayoutShapeOption, x, y);
 
                         if (!touchingShapeTool && touchingOption) {
@@ -657,8 +646,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             fabShapeOption.setImageResource(shapeIconID);
                             shapeIconID = (shapeIconID == squareIconID) ? circlesIconID : squareIconID;
                             fabShapesTool.setImageResource(shapeIconID);
-                        } else if (!touchingShapeTool && !touchingOption) {
-
+                            doNothing = false;
+                        } else {
+                            doNothing = (!touchingShapeTool);
                         }
 
                         break;
@@ -669,6 +659,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     }
 
 
+
+
+
+
     public class ImageViewTouchWithDraw extends android.support.v7.widget.AppCompatImageView {
 
         private Bitmap  mBitmap;
@@ -677,13 +671,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         int firstPointerIndex = -1;
         int firstPointerID = -1;
         Context context;
-        private static final int CIRCLES_LIMIT = 10;
-        private Paint selectedPaint;
-        private ArrayList<EditText> editTextList = new ArrayList<>(10);
-        private CircleArea touchedCircle;
 
+        private Paint selectedPaint;
+
+        private ArrayList<EditText> editTextList = new ArrayList<>(10);
         /** All available circles */
-        private ArrayList<CircleArea> mCircles =  new ArrayList<>(CIRCLES_LIMIT);
+
 
         public Paint getSelectedPaint() {
             return selectedPaint;
@@ -699,6 +692,24 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             selectedPaint.setStrokeCap(Paint.Cap.ROUND);
             selectedPaint.setStrokeWidth(12);
         }
+        private static final int SHAPE_LIMIT = 10;
+
+        private ArrayList<PaintedRectF> mRectFs = new ArrayList<>(SHAPE_LIMIT);
+        private RectF touchedRectF;
+
+        private class PaintedRectF {
+            RectF rectF;
+            Paint paint;
+
+            PaintedRectF(RectF rect, Paint paint) {
+                this.rectF = rect;
+                this.paint = paint;
+            }
+
+        }
+
+        private CircleArea touchedCircle;
+        private ArrayList<CircleArea> mCircles =  new ArrayList<>(SHAPE_LIMIT);
 
         /** Stores data about single circle */
         private class CircleArea {
@@ -754,6 +765,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 canvas.drawCircle(circle.centerX, circle.centerY, circle.radius, circle.paint);
             }
 
+            for (PaintedRectF pRectF : mRectFs) {
+                canvas.drawRect(pRectF.rectF, pRectF.paint);
+            }
+
             canvas.save();
         }
 
@@ -762,6 +777,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         private EditText ET;
         private boolean dontMove = false;
         private ScaleGestureDetector mScaleGestureDetector;
+
         @Override
         public boolean onTouchEvent(MotionEvent event) {
 
@@ -771,7 +787,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             int currentPointerId = event.getPointerId(index);
             final View currentView = getCurrentFocus();
             final int action = event.getAction();
-
 
             mScaleGestureDetector.onTouchEvent(event);
 
@@ -801,7 +816,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         mX = x;
                         mY = y;
                         // check if we've touched inside some circle
+                        touchedCircle = getTouchedCircle(x, y);
+                        touchedRectF = getTouchedRectF(x, y);
+
+                        touchedRectF = obtainTouchedRectF(x, y);
                         touchedCircle = obtainTouchedCircle(x, y);
+
 
                     } else if (isTextSelected) {
                         // If in an ET already, clear focus. Else, make a new one.
@@ -811,7 +831,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         } else {
                             // make an EditText and put it in a layout
                             ET = new EditText(getApplicationContext());
-                            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+                            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+                                    RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                             params.leftMargin = (int) x;
                             params.topMargin = (int) y - 60;
                             relativeLayout.addView(ET, params);
@@ -898,7 +919,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                                 float offsetX = 0;
                                 float offsetY = 0;
-                                if ((x > mX) || (x < mX))
+                                if ((x > mX) || (x < mX))  // THIS probably not needed
                                     offsetX = x - mX;
 
                                 if ((y > mY) || (y < mY))
@@ -906,6 +927,20 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                                 touchedCircle.centerX = touchedCircle.centerX + offsetX;
                                 touchedCircle.centerY = touchedCircle.centerY + offsetY;
+                                mX = x;
+                                mY = y;
+                            }
+
+                            if (touchedRectF != null) {
+                                float offsetX = 0;
+                                float offsetY = 0;
+
+                                offsetX = x - mX;
+                                offsetY = y - mY;
+
+                                touchedRectF.offsetTo(touchedRectF.left + offsetX,
+                                                      touchedRectF.top + offsetY);
+
                                 mX = x;
                                 mY = y;
                             }
@@ -930,12 +965,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     } else if (isShapesSelected) {
                         if (currentPointerId == firstPointerID) {
                             touchedCircle = null;
+                            touchedRectF = null;
                         }
 
                     } else if (isTextSelected) {
 
                     }
-
 
                     invalidate();
                     break;
@@ -962,12 +997,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
 
         private CircleArea obtainTouchedCircle(final float xTouch, final float yTouch) {
-            CircleArea touchedCircle = getTouchedCircle(xTouch, yTouch);
 
-            if (null == touchedCircle) {
+            if ( (null == touchedCircle) && (shapeIconID == circlesIconID) && (null == touchedRectF) ) {
                 touchedCircle = new CircleArea(xTouch, yTouch, 200, selectedPaint);
 
-                if (mCircles.size() == CIRCLES_LIMIT) {
+                if (mCircles.size() == SHAPE_LIMIT) {
                     // remove last circle
                     mCircles.remove(0);
                 }
@@ -977,6 +1011,26 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             return touchedCircle;
         }
+
+        private RectF obtainTouchedRectF(final float xTouch, final float yTouch) {
+
+            if ( (null == touchedRectF) && (shapeIconID == squareIconID) && (null == touchedCircle)) {
+                touchedRectF = new RectF(xTouch - 200,
+                                         yTouch - 200,
+                                        xTouch + 200,
+                                      yTouch + 200);
+
+                if (mRectFs.size() == SHAPE_LIMIT) {
+                    // remove last circle
+                    mRectFs.remove(0);
+                }
+                PaintedRectF pRect = new PaintedRectF(touchedRectF, selectedPaint);
+                mRectFs.add(pRect);
+            }
+
+            return touchedRectF;
+        }
+
         private CircleArea getTouchedCircle(final float xTouch, final float yTouch) {
             CircleArea touched = null;
 
@@ -990,6 +1044,18 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             return touched;
         }
 
+        private RectF getTouchedRectF(final float xTouch, final float yTouch) {
+            RectF touched = null;
+
+            for (PaintedRectF pRectF : mRectFs) {
+                if (pRectF.rectF.contains((int) xTouch, (int) yTouch)) {
+                    touched = pRectF.rectF;
+                    break;
+                }
+            }
+
+            return touched;
+        }
         private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
             private PointF viewportFocus = new PointF();
@@ -997,22 +1063,34 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             private float lastSpanY;
             private float lastSpan;
             private float lastRadius;
+            private RectF lastRectF;
             float currentRadius;
             float currentSpan;
-            float radiusDiff;
-            final float circleMinSize = 150;
-            float circleMaxSize;
+            float currentSpanX;
+            float currentSpanY;
+            float spanDiff;
+            final float shapeMinSize = 150;
+            float shapeMaxHeight;
+            float shapeMaxWidth;
             float canvasHeight;
             float canvasWidth;
+            float circleMax = 0;
 
 
             @Override
             public boolean onScaleBegin(ScaleGestureDetector detector) {
 
+                lastSpan = detector.getCurrentSpan();
+                lastSpanX = detector.getCurrentSpanX();
+                lastSpanY = detector.getCurrentSpanY();
+
                 if (touchedCircle != null) {
                     lastRadius = touchedCircle.radius;
-                    lastSpan = detector.getCurrentSpan();
                 }
+                if (touchedRectF != null) {
+                    lastRectF = touchedRectF;
+                }
+
                 return true;
             }
 
@@ -1021,35 +1099,81 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 if (isShapesSelected) {
 
+                    currentSpan = detector.getCurrentSpan();
+                    currentSpanX = detector.getCurrentSpanX();
+                    currentSpanY = detector.getCurrentSpanY();
+                    spanDiff = currentSpan - lastSpan;
+
+                    float spanXDiff = currentSpanX - lastSpanX;
+                    float spanYDiff = currentSpanY - lastSpanY;
+
+                    boolean scalingUp = spanDiff > 0;
+                    canvasHeight = mCanvas.getHeight();
+                    canvasWidth = mCanvas.getWidth();
+
+                    shapeMaxWidth = canvasWidth/2;
+
+                    shapeMaxHeight = canvasHeight/2;
+
+                    circleMax = (shapeMaxHeight > shapeMaxWidth) ? shapeMaxWidth : shapeMaxHeight;
+
                     if (touchedCircle != null) {
 
                         currentRadius = touchedCircle.radius;
-                        currentSpan = detector.getCurrentSpan();
+                        if ((!scalingUp && (lastRadius >= shapeMinSize)) ||
+                            (scalingUp && (lastRadius < circleMax))) {
 
-                        radiusDiff = (currentSpan - lastSpan)/2;
-                        boolean scalingUp = radiusDiff > 0;
-
-                        canvasHeight = mCanvas.getHeight();
-                        canvasWidth = mCanvas.getWidth();
-                        if (canvasHeight > canvasWidth) {
-                            circleMaxSize  = canvasWidth/2;
-                        } else {
-                            circleMaxSize  = canvasHeight/2;
-                        }
-
-                        if ((!scalingUp && (lastRadius >= circleMinSize)) || (scalingUp && (lastRadius < circleMaxSize))) {
-
-                            if ((touchedCircle.radius + radiusDiff) > circleMaxSize) {
-                                touchedCircle.radius = circleMaxSize;
-                            } else if ((touchedCircle.radius + radiusDiff) < circleMinSize) {
-                                touchedCircle.radius = circleMinSize;
+                            if ((touchedCircle.radius + spanDiff/2) > circleMax) {
+                                touchedCircle.radius = circleMax;
+                            } else if ((touchedCircle.radius + spanDiff/2) < shapeMinSize) {
+                                touchedCircle.radius = shapeMinSize;
                             } else {
-                                touchedCircle.radius += (radiusDiff);
+                                touchedCircle.radius += (spanDiff/2);
                             }
 
                             lastRadius = touchedCircle.radius;
                             lastSpan = currentSpan;
                         }
+                    }
+
+                    if (touchedRectF != null) {
+
+                        if ((!scalingUp && (lastRectF.width()/2 >= shapeMinSize)) ||
+                            (scalingUp && (lastRectF.width()/2 < shapeMaxWidth))) {
+
+                            if ((touchedRectF.width() + spanXDiff) / 2 > shapeMaxWidth) {
+                                touchedRectF.left = touchedRectF.centerX() - shapeMaxWidth;
+                                touchedRectF.right = touchedRectF.centerX() + shapeMaxWidth;
+
+                            } else if ((touchedRectF.width() + spanXDiff) / 2 < shapeMinSize) {
+                                touchedRectF.left = touchedRectF.centerX() - shapeMinSize;
+                                touchedRectF.right = touchedRectF.centerX() + shapeMinSize;
+                            } else {
+                                touchedRectF.right += (spanXDiff / 2);
+                                touchedRectF.left -= (spanXDiff / 2);
+                            }
+                        }
+
+                        if ((!scalingUp && (lastRectF.width()/2 >= shapeMinSize)) ||
+                                (scalingUp && (lastRectF.width()/2 < shapeMaxHeight))) {
+
+                            if ((touchedRectF.height() + spanYDiff)/2 > shapeMaxHeight) {
+                                touchedRectF.top = touchedRectF.centerY() - shapeMaxHeight;
+                                touchedRectF.bottom = touchedRectF.centerY() + shapeMaxHeight;
+
+                            } else if ((touchedRectF.height() + spanYDiff)/2 < shapeMinSize) {
+                                touchedRectF.top = touchedRectF.centerY() - shapeMinSize;
+                                touchedRectF.bottom = touchedRectF.centerY() + shapeMinSize;
+                            } else {
+                                touchedRectF.top -= (spanYDiff/2);
+                                touchedRectF.bottom += (spanYDiff/2);
+                            }
+
+                            lastSpanX = currentSpanX;
+                            lastSpanY = currentSpanY;
+                            lastRectF = touchedRectF;
+                        }
+
                     }
                 }
                 return true;
