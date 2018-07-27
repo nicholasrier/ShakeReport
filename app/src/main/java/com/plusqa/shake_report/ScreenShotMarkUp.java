@@ -58,7 +58,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private ImageViewTouchWithDraw screenShotView;
 
     FloatingActionButton fabCurrentTool, fabDrawTool, fabShapesTool, fabShapeOption, fabTextTool;
-    FloatingActionButton fabRed, fabGreen, fabBlack;
+    FloatingActionButton colorFAB1, colorFAB2, colorFAB3;
     LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText, fabCurrentToolLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
@@ -75,6 +75,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public int currentColor;
     private int selectedColor;
+    private int previousColor;
+    private int fab1Color;
+    private int fab2Color;
+    private int fab3Color;
 
     private boolean isDrawSelected = true;
     private boolean isShapesSelected = false;
@@ -161,12 +165,21 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabShapeOption = findViewById(R.id.fab_shapeOption);
         fabTextTool = findViewById(R.id.fab3);
         //color FABs
-        fabRed = findViewById(R.id.fab_red);
-        fabGreen = findViewById(R.id.fab_green);
-        fabBlack = findViewById(R.id.fab_black);
+        colorFAB1 = findViewById(R.id.fab_red);
+        colorFAB2 = findViewById(R.id.fab_green);
+        colorFAB3 = findViewById(R.id.fab_black);
 
+//        colorFAB1.color = red;
+//        colorFAB2.color = blue;
+//        colorFAB3.color = black;
+//        ColorStateList csl = colorFAB1.getBackgroundTintList();
+//        boolean isitred = csl.getDefaultColor() == red;
         currentColor = green;
         selectedColor = green;
+        previousColor = green;
+        fab1Color = red;
+        fab2Color = blue;
+        fab3Color = black;
 
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
@@ -211,7 +224,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
         //set initial color
-        selectColor();
+//        selectColor(fabCurrentTool);
     }
 
     @Override
@@ -460,31 +473,40 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
     }
 
-    public void tapRed (View view) {
+    public void tapColor1 (View view) {
         //set color of FABs
-        selectedColor = red;
-        selectColor();
+        previousColor = currentColor;
+        selectedColor = fab1Color;
+
+        selectColor(view);
+        fab1Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(red);
+        screenShotView.setSelectedPaint(selectedColor);
     }
 
-    public void tapBlack (View view) {
+    public void tapColor2 (View view) {
         //set color of FABs
-        selectedColor = black;
-        selectColor();
+        previousColor = currentColor;
+        selectedColor = fab2Color;
+
+        selectColor(view);
+        fab2Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(black);
+        screenShotView.setSelectedPaint(selectedColor);
     }
 
-    public void tapGreen (View view) {
+    public void tapColor3 (View view) {
         //set color of FABs
-        selectedColor = green;
-        selectColor();
+        previousColor = currentColor;
+        selectedColor = fab3Color;
+
+        selectColor(view);
+        fab3Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(green);
+        screenShotView.setSelectedPaint(selectedColor);
     }
 
-    public void selectColor() {
+    public void selectColor(final View view) {
         //implement later -- use four colors - don't display active color in color options
 
         ObjectAnimator animator = ObjectAnimator.ofInt(fabCurrentTool,
@@ -505,18 +527,26 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 };
 
                 int[] colors = new int[] {
-                        R.color.color_red,
-                        Color.parseColor("#51ccc0"),
-                        R.color.color_black
+                        red,
+                        green,
+                        black,
+                        blue
                 };
 
                 ColorStateList myList = new ColorStateList(states, colors);
                 int animatedValue = (int) animation.getAnimatedValue();
-                fabCurrentTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
-                fabDrawTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
-                fabShapesTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
-                fabShapeOption.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
-                fabTextTool.setBackgroundTintList(ColorStateList.valueOf( animatedValue));
+                fabCurrentTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabDrawTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabShapesTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabShapeOption.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabTextTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                if (selectedColor == fab1Color)
+                    colorFAB1.setBackgroundTintList(ColorStateList.valueOf(previousColor));
+                else if (selectedColor == fab2Color) {
+                    colorFAB2.setBackgroundTintList(ColorStateList.valueOf(previousColor));
+                } else if (selectedColor == fab3Color) {
+                    colorFAB3.setBackgroundTintList(ColorStateList.valueOf(previousColor));
+                }
             }
         });
         animator.start();
@@ -816,11 +846,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         mX = x;
                         mY = y;
                         // check if we've touched inside some circle
-                        touchedCircle = getTouchedCircle(x, y);
+
                         touchedRectF = getTouchedRectF(x, y);
+                        if (touchedRectF == null)
+                            touchedCircle = getTouchedCircle(x, y);
 
                         touchedRectF = obtainTouchedRectF(x, y);
-                        touchedCircle = obtainTouchedCircle(x, y);
+                        if (touchedRectF == null)
+                            touchedCircle = obtainTouchedCircle(x, y);
+
+
 
 
                     } else if (isTextSelected) {
@@ -1069,7 +1104,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             float currentSpanX;
             float currentSpanY;
             float spanDiff;
-            final float shapeMinSize = 150;
+            final float shapeMinSize = 50;
             float shapeMaxHeight;
             float shapeMaxWidth;
             float canvasHeight;
