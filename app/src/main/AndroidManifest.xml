@@ -24,7 +24,8 @@
         </activity>
         <activity
             android:name=".ScreenShotMarkUp"
-            android:windowSoftInputMode="adjustResize"/>
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".FormatAndSend"></activity>
     </application>
 
 </manifest>

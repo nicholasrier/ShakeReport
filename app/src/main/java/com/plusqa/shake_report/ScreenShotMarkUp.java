@@ -6,6 +6,7 @@ import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -53,11 +54,9 @@ import java.util.ArrayList;
 
 public class ScreenShotMarkUp extends AppCompatActivity {
 
-    private Toolbar mTopToolbar;
-
     private ImageViewTouchWithDraw screenShotView;
 
-    FloatingActionButton fabCurrentTool, fabTool1, fabTool2, fabShapeOption, fabTool3;
+    FloatingActionButton fabCurrentTool, fabTool1, fabTool2, fabShapeOption, fabTool3, fabDelete;
     FloatingActionButton colorFAB1, colorFAB2, colorFAB3;
     LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText, fabCurrentToolLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
@@ -74,7 +73,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private int circlesIconID;
     private int shapeIconID;
     private int currentIconID;
-    private int previousIconID;
 
     public int currentColor;
     private int selectedColor;
@@ -114,8 +112,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         setContentView(R.layout.activity_screen_shot_mark_up);
 
         //Set up toolbar
-        mTopToolbar = findViewById(R.id.my_toolbar);
+        Toolbar mTopToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(mTopToolbar);
+//        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
 
         //load screenshot into screenShotImageView
@@ -156,8 +155,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         textIconID = R.drawable.ic_text_fields_white_24dp;
         currentIconID = drawIconID;
         deleteIconID = R.drawable.ic_delete_forever_24dp;
-        previousIconID = drawIconID;
-        toolIconID1 = deleteIconID;
+        toolIconID1 = circlesIconID;
         toolIconID2 = squareIconID;
         toolIconID3 = textIconID;
 
@@ -177,6 +175,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabTool2 = findViewById(R.id.fab2);
         fabShapeOption = findViewById(R.id.fab_shapeOption);
         fabTool3 = findViewById(R.id.fab3);
+        fabDelete = findViewById(R.id.fabDelete);
         //color FABs
         colorFAB1 = findViewById(R.id.fab_red);
         colorFAB2 = findViewById(R.id.fab_green);
@@ -216,12 +215,14 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 }
             }
         });
+        fabDelete.show();
+        fabDelete.hide();
 
-        shapeOptionTouchListener = new OptionMenuTouchListener();
+//        shapeOptionTouchListener = new OptionMenuTouchListener();
 
-        fabTool2.setOnTouchListener(shapeOptionTouchListener);
-
-        fabShapeOption.setOnTouchListener(shapeOptionTouchListener);
+//        fabTool2.setOnTouchListener(shapeOptionTouchListener);
+//
+//        fabShapeOption.setOnTouchListener(shapeOptionTouchListener);
 
         fabLayoutShapeOption.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -244,6 +245,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
+        Intent intent = new Intent(getApplicationContext(), FormatAndSend.class);
+        startActivity(intent);
         int id = item.getItemId();
 
         if (id == R.id.action_done) {
@@ -448,19 +451,17 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 fabTool3.setImageResource(currentIconID);
                 toolIconID3 = currentIconID;
             }
-            if (currentIconID == shapeIconID) {
-                fabLayoutShapeOption.setY(v.getY()+4);
-                float y = fabLayoutShapeOption.getY();
-                v.setOnTouchListener(shapeOptionTouchListener);
-            }
+
             currentIconID = iconID;
 
             isDrawSaved = false;
             isShapeSaved = false;
             isDrawSelected = currentIconID == drawIconID;
             isTextSelected = currentIconID == textIconID;
-            isShapesSelected = currentIconID == shapeIconID;
 
+            isShapesSelected = (currentIconID == squareIconID) || (currentIconID == circlesIconID);
+            if (isShapesSelected)
+                shapeIconID = (currentIconID == squareIconID) ? squareIconID : circlesIconID;
 
 
             closeFABMenu();
@@ -692,9 +693,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
 
-
-
-
     public class ImageViewTouchWithDraw extends android.support.v7.widget.AppCompatImageView {
 
         private Bitmap  mBitmap;
@@ -838,6 +836,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             break;
                         }
                         fabCurrentTool.hide();
+                        fabDelete.show();
+
                         mPath.reset();
                         mPath.moveTo(x, y);
                         mX = x;
@@ -845,6 +845,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     } else if (isShapesSelected) {
                         fabCurrentTool.hide();
+                        fabDelete.show();
                         mX = x;
                         mY = y;
                         // check if we've touched inside some circle
@@ -991,6 +992,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 case MotionEvent.ACTION_UP:
                     fabCurrentTool.show();
+                    fabDelete.hide();
                     if (isDrawSelected) {
                         if (dontMove) {
                             break;
@@ -1013,12 +1015,14 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     break;
 
                 case MotionEvent.ACTION_POINTER_UP:
-                    if (isDrawSelected)
-                        fabCurrentTool.show();
+
                     if (isDrawSelected) {
                         if (dontMove) {
                             break;
                         }
+
+                        fabCurrentTool.show();
+                        fabDelete.hide();
                         firstPointerID = -1;
                     } else if (isShapesSelected) {
 
@@ -1095,7 +1099,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
         private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
-            private PointF viewportFocus = new PointF();
             private float lastSpanX;
             private float lastSpanY;
             private float lastSpan;

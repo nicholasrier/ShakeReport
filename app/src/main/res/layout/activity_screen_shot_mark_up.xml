@@ -81,7 +81,7 @@
             android:layout_marginStart="10dp"
             android:onClick="tapTool"
             app:fabSize="mini"
-            app:srcCompat="@drawable/ic_delete_forever_24dp" />
+            app:srcCompat="@drawable/ic_sharp_bubble_chart_24px" />
     </LinearLayout>
 
     <!--Shapes options-->
@@ -177,7 +177,7 @@
             android:onClick="tapColor1"
             app:backgroundTint="@color/color_red"
             app:fabCustomSize="25dp"
-            app:rippleColor="@color/color_white" />
+            app:rippleColor="@color/color_red"/>
     </LinearLayout>
 
 
@@ -234,7 +234,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginBottom="@dimen/fab_margin"
-        android:layout_marginRight="@dimen/fab_margin"
+        android:layout_marginEnd="@dimen/fab_margin"
         android:clipToPadding="false"
         android:gravity="center_vertical"
         android:padding="@dimen/standard_12">
@@ -249,6 +249,31 @@
             android:tint="@color/color_white"
             app:fabSize="normal"
             app:srcCompat="@drawable/ic_brush_black_24dp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/fabDeleteLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginBottom="@dimen/fab_margin"
+        android:layout_marginStart="@dimen/fab_margin"
+        android:clipToPadding="false"
+        android:gravity="center_vertical"
+        android:padding="@dimen/standard_12">
+
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fabDelete"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center_vertical"
+            android:tint="@color/color_black"
+            android:backgroundTint="@color/color_white"
+            app:fabSize="mini"
+            app:borderWidth="0dp"
+            app:srcCompat="@drawable/ic_outline_delete_outline_24px" />
     </LinearLayout>
 
 

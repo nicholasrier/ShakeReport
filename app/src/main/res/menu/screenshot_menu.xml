@@ -5,24 +5,23 @@
     tools:context=".ScreenShotMarkUp">
 
     <item
-        android:id="@+id/action_done"
-        android:orderInCategory="300"
-        android:title="User"
-        android:icon="@drawable/ic_send_24dp"
-        app:showAsAction="always" />
+        android:id="@+id/action_undo"
+        android:orderInCategory="1"
+        android:title="Undo"
+        android:icon="@drawable/ic_sharp_undo_24px"
+        app:showAsAction="always"/>
 
     <item
         android:id="@+id/action_redo"
-        android:orderInCategory="250"
-        android:title="User"
+        android:orderInCategory="2"
+        android:title="Redo"
         android:icon="@drawable/ic_sharp_redo_24px"
-        app:showAsAction="ifRoom"/>
+        app:showAsAction="always"/>
 
     <item
-        android:id="@+id/action_undo"
-        android:orderInCategory="200"
-        android:title="User"
-        android:icon="@drawable/ic_sharp_undo_24px"
-        app:showAsAction="ifRoom"/>
-
+        android:id="@+id/action_done"
+        android:orderInCategory="3"
+        android:title="Done"
+        android:icon="@drawable/ic_send_24dp"
+        app:showAsAction="always" />
 </menu>
