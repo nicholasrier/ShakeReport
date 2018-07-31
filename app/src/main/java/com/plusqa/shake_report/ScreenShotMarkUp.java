@@ -57,7 +57,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     private ImageViewTouchWithDraw screenShotView;
 
-    FloatingActionButton fabCurrentTool, fabDrawTool, fabShapesTool, fabShapeOption, fabTextTool;
+    FloatingActionButton fabCurrentTool, fabTool1, fabTool2, fabShapeOption, fabTool3;
     FloatingActionButton colorFAB1, colorFAB2, colorFAB3;
     LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText, fabCurrentToolLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
@@ -68,10 +68,13 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     RelativeLayout.LayoutParams RLparams;
 
     private int drawIconID;
+    private int deleteIconID;
     private int squareIconID;
     private int textIconID;
     private int circlesIconID;
     private int shapeIconID;
+    private int currentIconID;
+    private int previousIconID;
 
     public int currentColor;
     private int selectedColor;
@@ -98,6 +101,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private static final int blue = Color.parseColor("#519ACC");
 
     private InputMethodManager imm;
+    private int toolIconID1;
+    private int toolIconID2;
+    private int toolIconID3;
+
+    OptionMenuTouchListener shapeOptionTouchListener;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -132,7 +140,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
         screenShotView.setImageBitmap(screenShotBM);
 
-        Paint currentPaint = new Paint();
+        final Paint currentPaint = new Paint();
         currentPaint.setAntiAlias(true);
         currentPaint.setDither(true);
         currentPaint.setColor(green);
@@ -141,12 +149,17 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         currentPaint.setStrokeCap(Paint.Cap.ROUND);
         currentPaint.setStrokeWidth(20);
 
-        drawIconID = R.drawable.ic_mode_edit_white_24dp;
+        drawIconID = R.drawable.ic_brush_black_24dp;
         squareIconID = R.drawable.ic_sharp_crop_square_white_24px;
         shapeIconID = squareIconID;
         circlesIconID = R.drawable.ic_sharp_bubble_chart_24px;
         textIconID = R.drawable.ic_text_fields_white_24dp;
-
+        currentIconID = drawIconID;
+        deleteIconID = R.drawable.ic_delete_forever_24dp;
+        previousIconID = drawIconID;
+        toolIconID1 = deleteIconID;
+        toolIconID2 = squareIconID;
+        toolIconID3 = textIconID;
 
         //FAB tool menu layouts
         fabLayoutDraw = findViewById(R.id.fabLayout1);
@@ -160,20 +173,15 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabLayoutBlack = findViewById(R.id.fabColorLayout_black);
         //tool FABs
         fabCurrentTool = findViewById(R.id.fab);
-        fabDrawTool = findViewById(R.id.fab1);
-        fabShapesTool = findViewById(R.id.fab2);
+        fabTool1 = findViewById(R.id.fab1);
+        fabTool2 = findViewById(R.id.fab2);
         fabShapeOption = findViewById(R.id.fab_shapeOption);
-        fabTextTool = findViewById(R.id.fab3);
+        fabTool3 = findViewById(R.id.fab3);
         //color FABs
         colorFAB1 = findViewById(R.id.fab_red);
         colorFAB2 = findViewById(R.id.fab_green);
         colorFAB3 = findViewById(R.id.fab_black);
 
-//        colorFAB1.color = red;
-//        colorFAB2.color = blue;
-//        colorFAB3.color = black;
-//        ColorStateList csl = colorFAB1.getBackgroundTintList();
-//        boolean isitred = csl.getDefaultColor() == red;
         currentColor = green;
         selectedColor = green;
         previousColor = green;
@@ -209,9 +217,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
         });
 
-        OptionMenuTouchListener shapeOptionTouchListener = new OptionMenuTouchListener();
+        shapeOptionTouchListener = new OptionMenuTouchListener();
 
-        fabShapesTool.setOnTouchListener(shapeOptionTouchListener);
+        fabTool2.setOnTouchListener(shapeOptionTouchListener);
 
         fabShapeOption.setOnTouchListener(shapeOptionTouchListener);
 
@@ -323,26 +331,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    public int getCurrentColor() {
-        return currentColor;
-    }
-
-    public void setCurrentColor(int color) {
-        currentColor = color;
-    }
-
-    public boolean isDrawSelected () {
-        return isDrawSelected;
-    }
-
-    public boolean isTextSelected () {
-        return isTextSelected;
-    }
-
-    public boolean isShapesSelected () {
-        return isShapesSelected;
-    }
-
     private void showFABMenu(){
         isFABOpen=true;
 
@@ -408,7 +396,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     fabLayoutGreen.setVisibility(View.GONE);
                     fabLayoutBlack.setVisibility(View.GONE);
                     fabBGLayout.setVisibility(View.GONE);
-
                     if (!isTextSelected) {
                         deselectView(getCurrentFocus());
                     }
@@ -432,46 +419,56 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
     }
 
-    public void tapDraw(View view) {
+
+
+    @SuppressLint("ClickableViewAccessibility")
+    public void tapTool(View v) {
         if(isFABOpen){
+            int iconID;
+            View.OnTouchListener listener = new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    return false;
+                }
+            };
+            fabTool1.setOnTouchListener(listener);
+            fabTool2.setOnTouchListener(listener);
+            fabTool3.setOnTouchListener(listener);
+
+            if (v == fabTool1) {
+                iconID = toolIconID1;
+                fabTool1.setImageResource(currentIconID);
+                toolIconID1 = currentIconID;
+            } else if (v == fabTool2) {
+                iconID = toolIconID2;
+                fabTool2.setImageResource(currentIconID);
+                toolIconID2 = currentIconID;
+            } else {
+                iconID = toolIconID3;
+                fabTool3.setImageResource(currentIconID);
+                toolIconID3 = currentIconID;
+            }
+            if (currentIconID == shapeIconID) {
+                fabLayoutShapeOption.setY(v.getY()+4);
+                float y = fabLayoutShapeOption.getY();
+                v.setOnTouchListener(shapeOptionTouchListener);
+            }
+            currentIconID = iconID;
+
             isDrawSaved = false;
             isShapeSaved = false;
-            isDrawSelected = false;
-            isTextSelected = false;
-            isShapesSelected = false;
-            isDrawSelected = true;
+            isDrawSelected = currentIconID == drawIconID;
+            isTextSelected = currentIconID == textIconID;
+            isShapesSelected = currentIconID == shapeIconID;
+
+
+
             closeFABMenu();
-            fabCurrentTool.setImageResource(drawIconID);
+            fabCurrentTool.setImageResource(currentIconID);
         }
     }
 
-    public void tapText(View view) {
-        if(isFABOpen) {
-            isDrawSelected = false;
-            isTextSelected = false;
-            isShapesSelected = false;
-            isDrawSaved = false;
-            isShapeSaved = false;
-            isTextSelected = true;
 
-            closeFABMenu();
-            fabCurrentTool.setImageResource(textIconID);
-        }
-    }
-
-    public void tapShapes (View view) {
-        if(isFABOpen) {
-            isDrawSaved = false;
-            isShapeSaved = false;
-            isDrawSelected = false;
-            isTextSelected = false;
-            isShapesSelected = false;
-            isShapesSelected = true;
-            closeFABMenu();
-            fabCurrentTool.setImageResource(shapeIconID);
-
-        }
-    }
 
     public void tapColor1 (View view) {
         //set color of FABs
@@ -536,10 +533,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 ColorStateList myList = new ColorStateList(states, colors);
                 int animatedValue = (int) animation.getAnimatedValue();
                 fabCurrentTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
-                fabDrawTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
-                fabShapesTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabTool1.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabTool2.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
                 fabShapeOption.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
-                fabTextTool.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
+                fabTool3.setBackgroundTintList(ColorStateList.valueOf(animatedValue));
                 if (selectedColor == fab1Color)
                     colorFAB1.setBackgroundTintList(ColorStateList.valueOf(previousColor));
                 else if (selectedColor == fab2Color) {
@@ -622,16 +619,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
     public class OptionMenuTouchListener implements View.OnTouchListener {
-        boolean isShapesTool = false;
-        boolean isOption = false;
         boolean doNothing = false;
         @SuppressLint("ClickableViewAccessibility")
         @Override
         public boolean onTouch(final View v, MotionEvent event) {
 
             final int action = event.getAction();
-            isShapesTool = v.getId() == fabShapesTool.getId();
-            isOption = v.getId() == fabShapeOption.getId();
             int x = (int) event.getRawX();
             int y = (int) event.getRawY();
             if (isFABOpen) {
@@ -652,35 +645,44 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                                 } else {
                                     fabLayoutShapeOption.setVisibility(View.GONE);
                                     if (!doNothing) {
-                                        tapShapes(v);
+                                        tapTool(v);
                                     }
 
                                 }
                             }
 
                             @Override
-                            public void onAnimationCancel(Animator a) { }
+                            public void onAnimationCancel(Animator a) {
+                            }
+
                             @Override
-                            public void onAnimationRepeat(Animator a) { }
+                            public void onAnimationRepeat(Animator a) {
+                            }
                         });
                         break;
 
                     case MotionEvent.ACTION_UP:
                         isShapeOptionVisible = false;
                         fabLayoutShapeOption.animate().translationX(0);
-                        boolean touchingShapeTool = Utils.isViewInBounds(fabShapesTool, x, y);
+                        boolean touchingShapeTool = Utils.isViewInBounds(v, x, y);
                         boolean touchingOption = Utils.isViewInBounds(fabLayoutShapeOption, x, y);
 
                         if (!touchingShapeTool && touchingOption) {
 
                             fabShapeOption.setImageResource(shapeIconID);
                             shapeIconID = (shapeIconID == squareIconID) ? circlesIconID : squareIconID;
-                            fabShapesTool.setImageResource(shapeIconID);
-                            doNothing = false;
-                        } else {
-                            doNothing = (!touchingShapeTool);
+                            if (v == fabTool1) {
+                                fabTool1.setImageResource(shapeIconID);
+                                toolIconID1 = shapeIconID;
+                            } else if (v == fabTool2) {
+                                fabTool2.setImageResource(shapeIconID);
+                                toolIconID2 = shapeIconID;
+                            } else {
+                                fabTool3.setImageResource(shapeIconID);
+                                toolIconID3 = shapeIconID;
+                            }
                         }
-
+                        doNothing = !touchingShapeTool;
                         break;
                 }
             }

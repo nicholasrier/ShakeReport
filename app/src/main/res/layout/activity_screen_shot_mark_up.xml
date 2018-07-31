@@ -79,9 +79,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:onClick="tapDraw"
+            android:onClick="tapTool"
             app:fabSize="mini"
-            app:srcCompat="@drawable/ic_mode_edit_white_24dp" />
+            app:srcCompat="@drawable/ic_delete_forever_24dp" />
     </LinearLayout>
 
     <!--Shapes options-->
@@ -127,6 +127,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:tint="@color/color_white"
+            android:onClick="tapTool"
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_sharp_crop_square_white_24px" />
 
@@ -150,7 +151,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
-            android:onClick="tapText"
+            android:onClick="tapTool"
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_text_fields_white_24dp" />
     </LinearLayout>
@@ -243,11 +244,11 @@
             android:id="@+id/fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
+            android:layout_gravity="center"
             android:gravity="center_vertical"
             android:tint="@color/color_white"
             app:fabSize="normal"
-            app:srcCompat="@drawable/ic_mode_edit_white_24dp" />
+            app:srcCompat="@drawable/ic_brush_black_24dp" />
     </LinearLayout>
 
 
