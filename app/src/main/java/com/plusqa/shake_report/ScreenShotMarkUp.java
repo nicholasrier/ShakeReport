@@ -15,6 +15,7 @@ import android.graphics.Path;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.NavUtils;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -244,6 +245,17 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 // Done button
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
+//        switch (item.getItemId()) {
+//            case android.R.id.undo:
+//                return true;
+//
+//            case android.R.id.redo:
+//                return true;
+//
+//            case R.id.action_done:
+//                return true;
+//        }
 
         Intent intent = new Intent(getApplicationContext(), FormatAndSend.class);
         startActivity(intent);
