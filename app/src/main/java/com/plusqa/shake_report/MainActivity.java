@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
                 Utils.saveBitmap(context, image_name, b);
 
                 // Start a new activity to display and markup screenshot
-                Intent intent = new Intent(context, ScreenShotMarkUp.class);
+                Intent intent = new Intent(MainActivity.this, ScreenShotMarkUp.class);
                 startActivity(intent);
             }
 

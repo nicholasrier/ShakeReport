@@ -246,104 +246,102 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-//        switch (item.getItemId()) {
-//            case android.R.id.undo:
-//                return true;
-//
-//            case android.R.id.redo:
-//                return true;
-//
-//            case R.id.action_done:
-//                return true;
-//        }
+        switch (item.getItemId()) {
+            case android.R.id.undo:
+                return true;
 
-        Intent intent = new Intent(getApplicationContext(), FormatAndSend.class);
-        startActivity(intent);
-        int id = item.getItemId();
+            case android.R.id.redo:
+                return true;
 
-        if (id == R.id.action_done) {
+            case R.id.action_done:
+                Intent intent = new Intent(ScreenShotMarkUp.this, FormatAndSend.class);
+                startActivity(intent);
+                return true;
+        }
 
-            //save edited screenshot  --  casting with imageViewTouch exception
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private boolean sendReport() {
+        //save edited screenshot  --  casting with imageViewTouch exception
 //            Bitmap editedBitmap =((BitmapDrawable)screenShotView.getDrawable()).getBitmap();
 //            Utils.saveBitmap(this.getApplicationContext(), "EditedScreenShot", editedBitmap);
 
-            //grab log from internal storage
-            String logcatString = Utils.readLogFromInternalMemory(this.getApplicationContext()).toString();
+        //grab log from internal storage
+        String logcatString = Utils.readLogFromInternalMemory(this.getApplicationContext()).toString();
 
-            // Post to server
-            try {
-                RequestQueue requestQueue = Volley.newRequestQueue(this);
-                String URL = "http://172.16.1.170:3001/v1/logs.json";
-                JSONObject jsonBody = new JSONObject();
-                jsonBody.put("Title", "ShakeReport_log");
-                jsonBody.put("Logcat", logcatString);
-                final String requestBody = jsonBody.toString();
+        // Post to server
+        try {
+            RequestQueue requestQueue = Volley.newRequestQueue(this);
+            String URL = "http://172.16.1.170:3001/v1/logs.json";
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("Title", "ShakeReport_log");
+            jsonBody.put("Logcat", logcatString);
+            final String requestBody = jsonBody.toString();
 
-                StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        Log.i("VOLLEY", response);
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    Log.i("VOLLEY", response);
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("VOLLEY", error.toString());
+                }
+            }) {
+                @Override
+                public String getBodyContentType() {
+                    return "application/json; charset=utf-8";
+                }
+
+                @Override
+                public byte[] getBody() {
+                    try {
+                        return requestBody == null ? null : requestBody.getBytes("utf-8");
+                    } catch (UnsupportedEncodingException uee) {
+                        VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
+                        return null;
                     }
-                }, new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Log.e("VOLLEY", error.toString());
-                    }
-                }) {
-                    @Override
-                    public String getBodyContentType() {
-                        return "application/json; charset=utf-8";
-                    }
+                }
 
-                    @Override
-                    public byte[] getBody() {
-                        try {
-                            return requestBody == null ? null : requestBody.getBytes("utf-8");
-                        } catch (UnsupportedEncodingException uee) {
-                            VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
-                            return null;
-                        }
-                    }
+                @Override
+                protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                    String responseString = "";
 
-                    @Override
-                    protected Response<String> parseNetworkResponse(NetworkResponse response) {
-                        String responseString = "";
+                    CharSequence text = "";
+                    Context context = getApplicationContext();
+                    int duration = Toast.LENGTH_SHORT;
 
-                        CharSequence text = "";
-                        Context context = getApplicationContext();
-                        int duration = Toast.LENGTH_SHORT;
-
-                        if (null != response) {
-                            responseString = String.valueOf(response.statusCode);
-                            if(responseString.equals("200")) {
-                                text = "Report Sent!";
-                            } else {
-                                text = "Report did not send: " + responseString;
-                            }
+                    if (null != response) {
+                        responseString = String.valueOf(response.statusCode);
+                        if(responseString.equals("200")) {
+                            text = "Report Sent!";
                         } else {
-                            text = "Report did not send";
+                            text = "Report did not send: " + responseString;
                         }
-                        Toast toast = Toast.makeText(context, text, duration);
-                        toast.show();
-                        return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+                    } else {
+                        text = "Report did not send";
                     }
-                };
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                    return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+                }
+            };
 
-                requestQueue.add(stringRequest);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-//            return true;
-            CharSequence text = "Report Sent!";
-            int duration = Toast.LENGTH_SHORT;
-            Context context = getApplicationContext();
-            Toast toast = Toast.makeText(context, text, duration);
-            toast.show();
-            finish();
+            requestQueue.add(stringRequest);
+        } catch (JSONException e) {
+            e.printStackTrace();
         }
 
-        return super.onOptionsItemSelected(item);
+        CharSequence text = "Report Sent!";
+        int duration = Toast.LENGTH_SHORT;
+        Context context = getApplicationContext();
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
+
+        return true;
     }
 
     private void showFABMenu(){
