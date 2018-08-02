@@ -12,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
@@ -707,10 +708,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         private Bitmap  mBitmap;
         private Canvas mCanvas;
-        private Path    mPath;
-        int firstPointerIndex = -1;
-        int firstPointerID = -1;
-        Context context;
+        private Path mPath;
+        private int firstPointerIndex = -1;
+        private int firstPointerID = -1;
+        private boolean isNewLine = false;
 
         private Paint selectedPaint;
 
@@ -719,31 +720,39 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             Paint paint;
             RectF rectF;
             Path.Direction dir = Path.Direction.CW;
-            final boolean isRect, isOval, isText, isLine;
+            ArrayList<Point> points = new ArrayList<>();
+            private final boolean isRect, isOval, isText, isLine;
             static final int IS_RECT = 1;
             static final int IS_OVAL = 2;
             static final int IS_TEXT = 4;
             static final int IS_LINE = 8;
 
-            DrawAction(Path path, Paint paint, RectF rectF, int flags){
+            DrawAction(Path path, Paint paint, RectF rectF, int flag){
                 this.path = path;
                 this.paint = paint;
                 this.rectF = rectF;
 
-                this.isOval = (flags & IS_OVAL) == IS_OVAL;
-                this.isText = (flags & IS_TEXT) == IS_TEXT;
-                this.isLine = (flags & IS_LINE) == IS_LINE;
-                this.isRect = (flags & IS_RECT) == IS_RECT;
+                this.isOval = (flag & IS_OVAL) == IS_OVAL;
+                this.isText = (flag & IS_TEXT) == IS_TEXT;
+                this.isLine = (flag & IS_LINE) == IS_LINE;
+                this.isRect = (flag & IS_RECT) == IS_RECT;
 
                 addShapeToPath();
+                Point firstPoint = new Point((int) rectF.centerX(), (int) rectF.centerY());
+                points.add(firstPoint);
+                mPath.reset();
+                path.moveTo(rectF.centerX(), rectF.centerY());
             }
 
             void offsetDrawing(float offsetX, float offsetY) {
-                if (rectF != null) {
+                if (isRect || isOval) {
                     rectF.offsetTo(rectF.left + offsetX,
                             rectF.top + offsetY);
                     path.reset();
                     addShapeToPath();
+                }
+                if (isLine) {
+                    path.offset(offsetX, offsetY);
                 }
             }
 
@@ -752,10 +761,15 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 if (this.isOval) path.addOval(rectF, dir);
             }
 
+            void drawTo(float x, float y, float prevX, float prevY) {
+                path.quadTo(prevX, prevY, (x + prevX) / 2, (y + prevY) / 2);
+            }
+
             boolean contains(float x, float y) {
 
                 return (this.isRect && this.rectF.contains(x, y)) ||
-                        (this.isOval && pointInOval(x,y));
+                        (this.isOval && pointInOval(x,y) ||
+                                (this.isLine && pointInLine(x,y)));
             }
 
             boolean pointInOval(float x, float y) {
@@ -765,6 +779,33 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 float height = rectF.height()/2;
                 return (dx * dx) / (width * width) + (dy * dy) / (height * height) <= 1;
             }
+
+            /* Adapted to Java from an answer provided by M Katz on Stack Overflow
+            Question: https://stackoverflow.com/questions/217578
+            Answer by M Katz: https://stackoverflow.com/a/16391873
+            M Katz User profile: https://stackoverflow.com/users/384670
+            Original code adapted from http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+             */
+
+
+
+            public boolean pointInLine(float x, float y) {
+                boolean inside = false;
+
+                for (Point p : points ) {
+                    if ( (p.x >= (x - 30)) && (p.x <= (x + 30)) &&
+                            (p.y >= (y - 30)) && (p.y <= (y + 30)) ) {
+                        inside = !inside;
+                    }
+                }
+                return inside;
+            }
+
+            public boolean isRect() {return this.isRect;}
+            public boolean isOval() {return this.isOval;}
+            public boolean isLine() {return this.isLine;}
+            public boolean isText() {return this.isText;}
+
         }
         ArrayList<DrawAction> actionsList = new ArrayList<>();
         private DrawAction touchedDrawing;
@@ -782,7 +823,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         public ImageViewTouchWithDraw(Context c, AttributeSet attrs) {
             super(c, attrs);
-            context=c;
             mPath = new Path();
             setSelectedPaint(green);
             mScaleGestureDetector = new ScaleGestureDetector(getApplicationContext(), new ScaleListener());
@@ -806,7 +846,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             super.onDraw(canvas);
             canvas.drawBitmap(mBitmap, 0, 0, null);
 
-            canvas.drawPath(mPath, selectedPaint);
+//            canvas.drawPath(mPath, selectedPaint);
 
             for (DrawAction drawAction : actionsList) {
                 canvas.drawPath(drawAction.path, drawAction.paint);
@@ -834,40 +874,44 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             int currentPointerId = event.getPointerId(index);
             final View currentView = getCurrentFocus();
             final int action = event.getAction();
-
             mScaleGestureDetector.onTouchEvent(event);
 
             switch (action & MotionEvent.ACTION_MASK) {
 
                 case MotionEvent.ACTION_DOWN:
+                    //accessibility requirement
                     performClick();
-                    if (isDrawSelected) {
-                        if (dontMove) {
-                            mPath.reset();
-                            mPath.moveTo(x, y);
-                            mX = x;
-                            mY = y;
-                            dontMove = false;
-                            deselectView(currentView);
-                            invalidate();
-                            break;
+
+                    if (isShapesSelected || isDrawSelected) {
+                        fabCurrentTool.hide();
+
+                        //old stuff -- subject to removal
+                        if (isDrawSelected) {
+                            if (dontMove) {
+                                mPath.reset();
+                                mPath.moveTo(x, y);
+                                mX = x;
+                                mY = y;
+                                dontMove = false;
+                                deselectView(currentView);
+                                invalidate();
+                                break;
+                            }
+//                        fabCurrentTool.hide();
+
+//                        mPath.reset();
+//                        mPath.moveTo(x, y);
+//                        mX = x;
+//                        mY = y;
                         }
-                        fabCurrentTool.hide();
 
-                        mPath.reset();
-                        mPath.moveTo(x, y);
+
                         mX = x;
                         mY = y;
 
-                    } else if (isShapesSelected) {
-                        fabCurrentTool.hide();
-                        fabDelete.show();
-                        mX = x;
-                        mY = y;
-                        // check if we've touched inside some circle
-
+                        // check if we've touched inside some drawing
                         touchedDrawing = getTouchedDrawing(x, y);
-
+                        if (!isNewLine) fabDelete.show();
 
                     } else if (isTextSelected) {
                         // If in an ET already, clear focus. Else, make a new one.
@@ -943,35 +987,52 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 case MotionEvent.ACTION_MOVE:
 
-                    if (isDrawSelected) {
-                        if (dontMove) {
-                            break;
-                        }
+//                    if (isDrawSelected && isNewLine) {
+//                        if (dontMove) {
+//                            break;
+//                        }
+//
+//                        if (currentPointerId == firstPointerID) {
+//                            float dx = Math.abs(x - mX);
+//                            float dy = Math.abs(y - mY);
+//
+//                            if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
+//                                mPath.quadTo(mX, mY, (x + mX) / 2, (y + mY) / 2);
+//                                mX = x;
+//                                mY = y;
+//                            }
+//                        }
+//                    }
+                    if (!isTextSelected && (currentPointerId == firstPointerID)) {
 
-                        if (currentPointerId == firstPointerID) {
+                        Point p = new Point((int) x, (int) y);
+
+                        // if we are drawing a line, rather than moving an existing drawing
+                        if (touchedDrawing.isLine() && isNewLine) {
+                            if (dontMove) {
+                                break;
+                            }
+
                             float dx = Math.abs(x - mX);
                             float dy = Math.abs(y - mY);
+
                             if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
-                                mPath.quadTo(mX, mY, (x + mX) / 2, (y + mY) / 2);
+                                touchedDrawing.points.add(p);
+                                touchedDrawing.drawTo(x, y, mX, mY);
                                 mX = x;
                                 mY = y;
                             }
-                        }
-
-                    } else if (isShapesSelected) {
-                        if (currentPointerId == firstPointerID) {
-
+                        } else { // if it's an existing drawing
                             if (touchedDrawing != null) {
-
+                                touchedDrawing.points.add(p);
                                 touchedDrawing.offsetDrawing(x - mX,y - mY);
 
                                 mX = x;
                                 mY = y;
                             }
                         }
-                    } else if (isTextSelected) {
-
                     }
+
 
                     invalidate();
                     break;
@@ -979,22 +1040,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 case MotionEvent.ACTION_UP:
                     fabCurrentTool.show();
                     fabDelete.hide();
-                    if (isDrawSelected) {
-                        if (dontMove) {
-                            break;
-                        }
-                        mPath.lineTo(mX, mY);
-                        mCanvas.drawPath(mPath, selectedPaint);
-                        mPath.reset();
-
-                    } else if (isShapesSelected) {
-                        if (currentPointerId == firstPointerID) {
-                            touchedDrawing = null;
-                        }
-
-                    } else if (isTextSelected) {
-
-                    }
+                    touchedDrawing = null;
 
                     invalidate();
                     break;
@@ -1029,10 +1075,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             for (DrawAction drawAction : actionsList) {
                 if (drawAction.contains(xTouch,yTouch)) {
                     touched = drawAction;
+                    isNewLine = false;
                 }
             }
 
             if ( (null == touched) ) {
+
                 RectF rectF = new RectF(xTouch - 200,
                                          yTouch - 200,
                                         xTouch + 200,
@@ -1040,7 +1088,17 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 Path path = new Path();
 
-                int shapeFlag = (shapeIconID == squareIconID) ? DrawAction.IS_RECT : DrawAction.IS_OVAL;
+                int shapeFlag = 0;
+
+                if (isDrawSelected) {
+                    shapeFlag = DrawAction.IS_LINE;
+                    isNewLine = true;
+                } else if (isShapesSelected) {
+                    shapeFlag = (shapeIconID == squareIconID) ? DrawAction.IS_RECT : DrawAction.IS_OVAL;
+                } else if (isTextSelected) {
+                    shapeFlag = DrawAction.IS_TEXT;
+                }
+
                 touched = new DrawAction(path, selectedPaint, rectF, shapeFlag);
 
                 if (actionsList.size() == 50) {
@@ -1058,12 +1116,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             private float lastSpanX;
             private float lastSpanY;
-            private float lastSpan;
             private DrawAction lastTouchedDrawing;
-            float currentSpan;
             float currentSpanX;
             float currentSpanY;
-            float spanDiff;
             final float shapeMinSize = 100;
             float shapeMaxHeight;
             float shapeMaxWidth;
@@ -1074,11 +1129,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             @Override
             public boolean onScaleBegin(ScaleGestureDetector detector) {
 
-                lastSpan = detector.getCurrentSpan();
-                lastSpanX = detector.getCurrentSpanX();
-                lastSpanY = detector.getCurrentSpanY();
-
                 if (touchedDrawing != null) {
+                    lastSpanX = detector.getCurrentSpanX();
+                    lastSpanY = detector.getCurrentSpanY();
                     lastTouchedDrawing = touchedDrawing;
                 }
 
@@ -1090,52 +1143,53 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 if (isShapesSelected) {
 
-                    currentSpan = detector.getCurrentSpan();
-                    currentSpanX = detector.getCurrentSpanX();
-                    currentSpanY = detector.getCurrentSpanY();
-                    spanDiff = currentSpan - lastSpan;
-
-                    float spanXDiff = currentSpanX - lastSpanX;
-                    float spanYDiff = currentSpanY - lastSpanY;
-
-                    boolean scalingUp = spanDiff > 0;
-                    canvasHeight = mCanvas.getHeight();
-                    canvasWidth = mCanvas.getWidth();
-
-                    shapeMaxWidth = canvasWidth;
-                    shapeMaxHeight = canvasHeight;
-
                     if (touchedDrawing != null) {
+                        currentSpanX = detector.getCurrentSpanX();
+                        currentSpanY = detector.getCurrentSpanY();
+
+
+                        float spanXDiff = currentSpanX - lastSpanX;
+                        float spanYDiff = currentSpanY - lastSpanY;
+
+                        boolean scalingUpX = spanXDiff > 0;
+                        boolean scalingUpY = spanYDiff > 0;
+                        canvasHeight = mCanvas.getHeight();
+                        canvasWidth = mCanvas.getWidth();
+
+                        shapeMaxWidth = canvasWidth;
+                        shapeMaxHeight = canvasHeight;
+
                         RectF lastRectF = lastTouchedDrawing.rectF;
                         RectF currentRectF = touchedDrawing.rectF;
-                        if ((!scalingUp && (lastRectF.width() >= shapeMinSize)) ||
-                            (scalingUp && (lastRectF.width() < shapeMaxWidth))) {
 
-                            if ((currentRectF.width() + spanXDiff) > shapeMaxWidth) {
-                                currentRectF.left = currentRectF.centerX() - shapeMaxWidth;
-                                currentRectF.right = currentRectF.centerX() + shapeMaxWidth;
+                        if ((!scalingUpX && (lastRectF.width() >= shapeMinSize)) ||
+                                (scalingUpX && (lastRectF.width() <= shapeMaxWidth))) {
 
-                            } else if ((currentRectF.width() + spanXDiff) < shapeMinSize) {
-                                currentRectF.left = currentRectF.centerX() - shapeMinSize;
-                                currentRectF.right = currentRectF.centerX() + shapeMinSize;
+                            if ((currentRectF.width() + spanXDiff/2) > shapeMaxWidth) {
+                                currentRectF.left = currentRectF.centerX() - shapeMaxWidth/2;
+                                currentRectF.right = currentRectF.centerX() + shapeMaxWidth/2;
+
+                            } else if ((currentRectF.width() + spanXDiff/2) < shapeMinSize) {
+                                currentRectF.left = currentRectF.centerX() - shapeMinSize/2;
+                                currentRectF.right = currentRectF.centerX() + shapeMinSize/2;
                             } else {
-                                currentRectF.right += (spanXDiff / 2);
-                                currentRectF.left -= (spanXDiff / 2);
+                                currentRectF.right += (spanXDiff/2);
+                                currentRectF.left -= (spanXDiff/2);
                             }
 
 
                         }
 
-                        if ((!scalingUp && (lastRectF.height() >= shapeMinSize)) ||
-                                (scalingUp && (lastRectF.height() < shapeMaxHeight))) {
+                        if ((!scalingUpY && (lastRectF.height() >= shapeMinSize)) ||
+                                (scalingUpY && (lastRectF.height() <= shapeMaxHeight))) {
 
-                            if ((currentRectF.height() + spanYDiff) > shapeMaxHeight) {
-                                currentRectF.top = currentRectF.centerY() - shapeMaxHeight;
-                                currentRectF.bottom = currentRectF.centerY() + shapeMaxHeight;
+                            if ((currentRectF.height() + spanYDiff/2) > shapeMaxHeight) {
+                                currentRectF.top = currentRectF.centerY() - shapeMaxHeight/2;
+                                currentRectF.bottom = currentRectF.centerY() + shapeMaxHeight/2;
 
-                            } else if ((currentRectF.height() + spanYDiff) < shapeMinSize) {
-                                currentRectF.top = currentRectF.centerY() - shapeMinSize;
-                                currentRectF.bottom = currentRectF.centerY() + shapeMinSize;
+                            } else if ((currentRectF.height() + spanYDiff/2) < shapeMinSize) {
+                                currentRectF.top = currentRectF.centerY() - shapeMinSize/2;
+                                currentRectF.bottom = currentRectF.centerY() + shapeMinSize/2;
                             } else {
                                 currentRectF.top -= (spanYDiff/2);
                                 currentRectF.bottom += (spanYDiff/2);
