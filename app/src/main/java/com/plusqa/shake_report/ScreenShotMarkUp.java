@@ -714,13 +714,60 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         private Paint selectedPaint;
 
-        private ArrayList<EditText> editTextList = new ArrayList<>(10);
-        /** All available circles */
+        public class DrawAction {
+            Path path;
+            Paint paint;
+            RectF rectF;
+            Path.Direction dir = Path.Direction.CW;
+            final boolean isRect, isOval, isText, isLine;
+            static final int IS_RECT = 1;
+            static final int IS_OVAL = 2;
+            static final int IS_TEXT = 4;
+            static final int IS_LINE = 8;
 
+            DrawAction(Path path, Paint paint, RectF rectF, int flags){
+                this.path = path;
+                this.paint = paint;
+                this.rectF = rectF;
 
-        public Paint getSelectedPaint() {
-            return selectedPaint;
+                this.isOval = (flags & IS_OVAL) == IS_OVAL;
+                this.isText = (flags & IS_TEXT) == IS_TEXT;
+                this.isLine = (flags & IS_LINE) == IS_LINE;
+                this.isRect = (flags & IS_RECT) == IS_RECT;
+
+                addShapeToPath();
+            }
+
+            void offsetDrawing(float offsetX, float offsetY) {
+                if (rectF != null) {
+                    rectF.offsetTo(rectF.left + offsetX,
+                            rectF.top + offsetY);
+                    path.reset();
+                    addShapeToPath();
+                }
+            }
+
+            void addShapeToPath() {
+                if (this.isRect) path.addRect(rectF, dir);
+                if (this.isOval) path.addOval(rectF, dir);
+            }
+
+            boolean contains(float x, float y) {
+
+                return (this.isRect && this.rectF.contains(x, y)) ||
+                        (this.isOval && pointInOval(x,y));
+            }
+
+            boolean pointInOval(float x, float y) {
+                float dx = x - rectF.centerX();
+                float dy = y - rectF.centerY();
+                float width = rectF.width()/2;
+                float height = rectF.height()/2;
+                return (dx * dx) / (width * width) + (dy * dy) / (height * height) <= 1;
+            }
         }
+        ArrayList<DrawAction> actionsList = new ArrayList<>();
+        private DrawAction touchedDrawing;
 
         public void setSelectedPaint(int color) {
             this.selectedPaint = new Paint();
@@ -731,44 +778,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             selectedPaint.setStrokeJoin(Paint.Join.ROUND);
             selectedPaint.setStrokeCap(Paint.Cap.ROUND);
             selectedPaint.setStrokeWidth(12);
-        }
-        private static final int SHAPE_LIMIT = 10;
-
-        private ArrayList<PaintedRectF> mRectFs = new ArrayList<>(SHAPE_LIMIT);
-        private RectF touchedRectF;
-
-        private class PaintedRectF {
-            RectF rectF;
-            Paint paint;
-
-            PaintedRectF(RectF rect, Paint paint) {
-                this.rectF = rect;
-                this.paint = paint;
-            }
-
-        }
-
-        private CircleArea touchedCircle;
-        private ArrayList<CircleArea> mCircles =  new ArrayList<>(SHAPE_LIMIT);
-
-        /** Stores data about single circle */
-        private class CircleArea {
-            float radius;
-            float centerX;
-            float centerY;
-            Paint paint;
-
-            CircleArea(float centerX, float centerY, float radius, Paint paint) {
-                this.radius = radius;
-                this.centerX = centerX;
-                this.centerY = centerY;
-                this.paint = paint;
-            }
-
-            @Override
-            public String toString() {
-                return "Circle[" + centerX + ", " + centerY + ", " + radius + "]";
-            }
         }
 
         public ImageViewTouchWithDraw(Context c, AttributeSet attrs) {
@@ -796,17 +805,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             canvas.drawBitmap(mBitmap, 0, 0, null);
-            //Draw free-draws
 
             canvas.drawPath(mPath, selectedPaint);
 
-            //Draw circles
-            for (CircleArea circle : mCircles) {
-                canvas.drawCircle(circle.centerX, circle.centerY, circle.radius, circle.paint);
-            }
-
-            for (PaintedRectF pRectF : mRectFs) {
-                canvas.drawRect(pRectF.rectF, pRectF.paint);
+            for (DrawAction drawAction : actionsList) {
+                canvas.drawPath(drawAction.path, drawAction.paint);
             }
 
             canvas.save();
@@ -818,6 +821,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         private boolean dontMove = false;
         private ScaleGestureDetector mScaleGestureDetector;
 
+        @Override
+        public boolean performClick() {
+            return super.performClick();
+        }
         @Override
         public boolean onTouchEvent(MotionEvent event) {
 
@@ -833,7 +840,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             switch (action & MotionEvent.ACTION_MASK) {
 
                 case MotionEvent.ACTION_DOWN:
-
+                    performClick();
                     if (isDrawSelected) {
                         if (dontMove) {
                             mPath.reset();
@@ -846,7 +853,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             break;
                         }
                         fabCurrentTool.hide();
-                        fabDelete.show();
 
                         mPath.reset();
                         mPath.moveTo(x, y);
@@ -860,15 +866,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         mY = y;
                         // check if we've touched inside some circle
 
-                        touchedRectF = getTouchedRectF(x, y);
-                        if (touchedRectF == null)
-                            touchedCircle = getTouchedCircle(x, y);
-
-                        touchedRectF = obtainTouchedRectF(x, y);
-                        if (touchedRectF == null)
-                            touchedCircle = obtainTouchedCircle(x, y);
-
-
+                        touchedDrawing = getTouchedDrawing(x, y);
 
 
                     } else if (isTextSelected) {
@@ -963,31 +961,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     } else if (isShapesSelected) {
                         if (currentPointerId == firstPointerID) {
 
-                            if (touchedCircle != null) {
+                            if (touchedDrawing != null) {
 
-                                float offsetX = 0;
-                                float offsetY = 0;
-                                if ((x > mX) || (x < mX))  // THIS probably not needed
-                                    offsetX = x - mX;
-
-                                if ((y > mY) || (y < mY))
-                                    offsetY = y - mY;
-
-                                touchedCircle.centerX = touchedCircle.centerX + offsetX;
-                                touchedCircle.centerY = touchedCircle.centerY + offsetY;
-                                mX = x;
-                                mY = y;
-                            }
-
-                            if (touchedRectF != null) {
-                                float offsetX = 0;
-                                float offsetY = 0;
-
-                                offsetX = x - mX;
-                                offsetY = y - mY;
-
-                                touchedRectF.offsetTo(touchedRectF.left + offsetX,
-                                                      touchedRectF.top + offsetY);
+                                touchedDrawing.offsetDrawing(x - mX,y - mY);
 
                                 mX = x;
                                 mY = y;
@@ -1013,8 +989,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     } else if (isShapesSelected) {
                         if (currentPointerId == firstPointerID) {
-                            touchedCircle = null;
-                            touchedRectF = null;
+                            touchedDrawing = null;
                         }
 
                     } else if (isTextSelected) {
@@ -1047,84 +1022,53 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             return true;
         }
 
-        private CircleArea obtainTouchedCircle(final float xTouch, final float yTouch) {
+        private DrawAction getTouchedDrawing(final float xTouch, final float yTouch) {
 
-            if ( (null == touchedCircle) && (shapeIconID == circlesIconID) && (null == touchedRectF) ) {
-                touchedCircle = new CircleArea(xTouch, yTouch, 200, selectedPaint);
+            DrawAction touched = null;
 
-                if (mCircles.size() == SHAPE_LIMIT) {
-                    // remove last circle
-                    mCircles.remove(0);
+            for (DrawAction drawAction : actionsList) {
+                if (drawAction.contains(xTouch,yTouch)) {
+                    touched = drawAction;
                 }
-
-                mCircles.add(touchedCircle);
             }
 
-            return touchedCircle;
-        }
-
-        private RectF obtainTouchedRectF(final float xTouch, final float yTouch) {
-
-            if ( (null == touchedRectF) && (shapeIconID == squareIconID) && (null == touchedCircle)) {
-                touchedRectF = new RectF(xTouch - 200,
+            if ( (null == touched) ) {
+                RectF rectF = new RectF(xTouch - 200,
                                          yTouch - 200,
                                         xTouch + 200,
                                       yTouch + 200);
 
-                if (mRectFs.size() == SHAPE_LIMIT) {
-                    // remove last circle
-                    mRectFs.remove(0);
+                Path path = new Path();
+
+                int shapeFlag = (shapeIconID == squareIconID) ? DrawAction.IS_RECT : DrawAction.IS_OVAL;
+                touched = new DrawAction(path, selectedPaint, rectF, shapeFlag);
+
+                if (actionsList.size() == 50) {
+                    // remove first drawing
+                    actionsList.remove(0);
                 }
-                PaintedRectF pRect = new PaintedRectF(touchedRectF, selectedPaint);
-                mRectFs.add(pRect);
-            }
 
-            return touchedRectF;
-        }
-
-        private CircleArea getTouchedCircle(final float xTouch, final float yTouch) {
-            CircleArea touched = null;
-
-            for (CircleArea circle : mCircles) {
-                if ((circle.centerX - xTouch) * (circle.centerX - xTouch) + (circle.centerY - yTouch) * (circle.centerY - yTouch) <= circle.radius * circle.radius) {
-                    touched = circle;
-                    break;
-                }
+                actionsList.add(touched);
             }
 
             return touched;
         }
 
-        private RectF getTouchedRectF(final float xTouch, final float yTouch) {
-            RectF touched = null;
-
-            for (PaintedRectF pRectF : mRectFs) {
-                if (pRectF.rectF.contains((int) xTouch, (int) yTouch)) {
-                    touched = pRectF.rectF;
-                    break;
-                }
-            }
-
-            return touched;
-        }
         private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
             private float lastSpanX;
             private float lastSpanY;
             private float lastSpan;
-            private float lastRadius;
-            private RectF lastRectF;
-            float currentRadius;
+            private DrawAction lastTouchedDrawing;
             float currentSpan;
             float currentSpanX;
             float currentSpanY;
             float spanDiff;
-            final float shapeMinSize = 50;
+            final float shapeMinSize = 100;
             float shapeMaxHeight;
             float shapeMaxWidth;
             float canvasHeight;
             float canvasWidth;
-            float circleMax = 0;
 
 
             @Override
@@ -1134,11 +1078,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 lastSpanX = detector.getCurrentSpanX();
                 lastSpanY = detector.getCurrentSpanY();
 
-                if (touchedCircle != null) {
-                    lastRadius = touchedCircle.radius;
-                }
-                if (touchedRectF != null) {
-                    lastRectF = touchedRectF;
+                if (touchedDrawing != null) {
+                    lastTouchedDrawing = touchedDrawing;
                 }
 
                 return true;
@@ -1161,69 +1102,51 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     canvasHeight = mCanvas.getHeight();
                     canvasWidth = mCanvas.getWidth();
 
-                    shapeMaxWidth = canvasWidth/2;
+                    shapeMaxWidth = canvasWidth;
+                    shapeMaxHeight = canvasHeight;
 
-                    shapeMaxHeight = canvasHeight/2;
+                    if (touchedDrawing != null) {
+                        RectF lastRectF = lastTouchedDrawing.rectF;
+                        RectF currentRectF = touchedDrawing.rectF;
+                        if ((!scalingUp && (lastRectF.width() >= shapeMinSize)) ||
+                            (scalingUp && (lastRectF.width() < shapeMaxWidth))) {
 
-                    circleMax = (shapeMaxHeight > shapeMaxWidth) ? shapeMaxWidth : shapeMaxHeight;
+                            if ((currentRectF.width() + spanXDiff) > shapeMaxWidth) {
+                                currentRectF.left = currentRectF.centerX() - shapeMaxWidth;
+                                currentRectF.right = currentRectF.centerX() + shapeMaxWidth;
 
-                    if (touchedCircle != null) {
-
-                        currentRadius = touchedCircle.radius;
-                        if ((!scalingUp && (lastRadius >= shapeMinSize)) ||
-                            (scalingUp && (lastRadius < circleMax))) {
-
-                            if ((touchedCircle.radius + spanDiff/2) > circleMax) {
-                                touchedCircle.radius = circleMax;
-                            } else if ((touchedCircle.radius + spanDiff/2) < shapeMinSize) {
-                                touchedCircle.radius = shapeMinSize;
+                            } else if ((currentRectF.width() + spanXDiff) < shapeMinSize) {
+                                currentRectF.left = currentRectF.centerX() - shapeMinSize;
+                                currentRectF.right = currentRectF.centerX() + shapeMinSize;
                             } else {
-                                touchedCircle.radius += (spanDiff/2);
+                                currentRectF.right += (spanXDiff / 2);
+                                currentRectF.left -= (spanXDiff / 2);
                             }
 
-                            lastRadius = touchedCircle.radius;
-                            lastSpan = currentSpan;
-                        }
-                    }
 
-                    if (touchedRectF != null) {
-
-                        if ((!scalingUp && (lastRectF.width()/2 >= shapeMinSize)) ||
-                            (scalingUp && (lastRectF.width()/2 < shapeMaxWidth))) {
-
-                            if ((touchedRectF.width() + spanXDiff) / 2 > shapeMaxWidth) {
-                                touchedRectF.left = touchedRectF.centerX() - shapeMaxWidth;
-                                touchedRectF.right = touchedRectF.centerX() + shapeMaxWidth;
-
-                            } else if ((touchedRectF.width() + spanXDiff) / 2 < shapeMinSize) {
-                                touchedRectF.left = touchedRectF.centerX() - shapeMinSize;
-                                touchedRectF.right = touchedRectF.centerX() + shapeMinSize;
-                            } else {
-                                touchedRectF.right += (spanXDiff / 2);
-                                touchedRectF.left -= (spanXDiff / 2);
-                            }
                         }
 
-                        if ((!scalingUp && (lastRectF.width()/2 >= shapeMinSize)) ||
-                                (scalingUp && (lastRectF.width()/2 < shapeMaxHeight))) {
+                        if ((!scalingUp && (lastRectF.height() >= shapeMinSize)) ||
+                                (scalingUp && (lastRectF.height() < shapeMaxHeight))) {
 
-                            if ((touchedRectF.height() + spanYDiff)/2 > shapeMaxHeight) {
-                                touchedRectF.top = touchedRectF.centerY() - shapeMaxHeight;
-                                touchedRectF.bottom = touchedRectF.centerY() + shapeMaxHeight;
+                            if ((currentRectF.height() + spanYDiff) > shapeMaxHeight) {
+                                currentRectF.top = currentRectF.centerY() - shapeMaxHeight;
+                                currentRectF.bottom = currentRectF.centerY() + shapeMaxHeight;
 
-                            } else if ((touchedRectF.height() + spanYDiff)/2 < shapeMinSize) {
-                                touchedRectF.top = touchedRectF.centerY() - shapeMinSize;
-                                touchedRectF.bottom = touchedRectF.centerY() + shapeMinSize;
+                            } else if ((currentRectF.height() + spanYDiff) < shapeMinSize) {
+                                currentRectF.top = currentRectF.centerY() - shapeMinSize;
+                                currentRectF.bottom = currentRectF.centerY() + shapeMinSize;
                             } else {
-                                touchedRectF.top -= (spanYDiff/2);
-                                touchedRectF.bottom += (spanYDiff/2);
+                                currentRectF.top -= (spanYDiff/2);
+                                currentRectF.bottom += (spanYDiff/2);
                             }
 
-                            lastSpanX = currentSpanX;
-                            lastSpanY = currentSpanY;
-                            lastRectF = touchedRectF;
-                        }
 
+                        }
+                        lastSpanY = currentSpanY;
+                        lastSpanX = currentSpanX;
+                        touchedDrawing.path.addRect(currentRectF, Path.Direction.CW);
+                        lastTouchedDrawing = touchedDrawing;
                     }
                 }
                 return true;
