@@ -789,22 +789,22 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
 
-            public boolean pointInLine(float x, float y) {
+            boolean pointInLine(float x, float y) {
                 boolean inside = false;
 
                 for (Point p : points ) {
                     if ( (p.x >= (x - 30)) && (p.x <= (x + 30)) &&
                             (p.y >= (y - 30)) && (p.y <= (y + 30)) ) {
-                        inside = !inside;
+                        inside = true;
                     }
                 }
                 return inside;
             }
 
-            public boolean isRect() {return this.isRect;}
-            public boolean isOval() {return this.isOval;}
-            public boolean isLine() {return this.isLine;}
-            public boolean isText() {return this.isText;}
+            boolean isRect() {return this.isRect;}
+            boolean isOval() {return this.isOval;}
+            boolean isLine() {return this.isLine;}
+            boolean isText() {return this.isText;}
 
         }
         ArrayList<DrawAction> actionsList = new ArrayList<>();
@@ -1024,7 +1024,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             }
                         } else { // if it's an existing drawing
                             if (touchedDrawing != null) {
-                                touchedDrawing.points.add(p);
+//                                touchedDrawing.points.add(p);
                                 touchedDrawing.offsetDrawing(x - mX,y - mY);
 
                                 mX = x;
