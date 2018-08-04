@@ -752,6 +752,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     addShapeToPath();
                 }
                 if (isLine) {
+
+                    for (Point p : points ) {
+                        p.set(p.x += offsetX, p.y += offsetY);
+                    }
                     path.offset(offsetX, offsetY);
                 }
             }
@@ -780,21 +784,13 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 return (dx * dx) / (width * width) + (dy * dy) / (height * height) <= 1;
             }
 
-            /* Adapted to Java from an answer provided by M Katz on Stack Overflow
-            Question: https://stackoverflow.com/questions/217578
-            Answer by M Katz: https://stackoverflow.com/a/16391873
-            M Katz User profile: https://stackoverflow.com/users/384670
-            Original code adapted from http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
-             */
-
-
-
             boolean pointInLine(float x, float y) {
                 boolean inside = false;
-
+                RectF bounds = new RectF(x - 50,y - 50,x + 50,y + 50);
                 for (Point p : points ) {
-                    if ( (p.x >= (x - 30)) && (p.x <= (x + 30)) &&
-                            (p.y >= (y - 30)) && (p.y <= (y + 30)) ) {
+//                    if ( (p.x >= (x - 30)) && (p.x <= (x + 30)) &&
+//                            (p.y >= (y - 30)) && (p.y <= (y + 30)) ) {
+                    if (bounds.contains(p.x, p.y)) {
                         inside = true;
                     }
                 }
