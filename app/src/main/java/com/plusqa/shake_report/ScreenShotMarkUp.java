@@ -62,16 +62,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     FloatingActionButton fabCurrentTool, fabTool1, fabTool2, fabShapeOption, fabTool3, fabDelete;
     FloatingActionButton colorFAB1, colorFAB2, colorFAB3;
-    LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption, fabLayoutText, fabCurrentToolLayout, fabLayoutDelete;
+    LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption,
+                 fabLayoutText, fabCurrentToolLayout, fabLayoutDelete, screenshotLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
     boolean isFABOpen=false;
 
     RelativeLayout relativeLayout;
-    RelativeLayout.LayoutParams RLparams;
+
 
     private int drawIconID;
-    private int deleteIconID;
     private int squareIconID;
     private int textIconID;
     private int circlesIconID;
@@ -137,7 +137,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         screenShotView.setFitsSystemWindows(false);
 
         //adding view to layout
-        LinearLayout screenshotLayout = findViewById(R.id.screenshotLayout);
+        screenshotLayout = findViewById(R.id.screenshotLayout);
         screenshotLayout.addView(screenShotView);
 
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
@@ -158,7 +158,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         circlesIconID = R.drawable.ic_sharp_bubble_chart_24px;
         textIconID = R.drawable.ic_text_fields_white_24dp;
         currentIconID = drawIconID;
-        deleteIconID = R.drawable.ic_delete_forever_24dp;
         toolIconID1 = circlesIconID;
         toolIconID2 = squareIconID;
         toolIconID3 = textIconID;
@@ -197,7 +196,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
         relativeLayout = findViewById(R.id.ETLayout);
-
 
         fabBGLayout = findViewById(R.id.fabBGLayout);
 
@@ -551,6 +549,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
         }
         v.clearFocus();
+
     }
 
     //Spins fab when switching between text and tools
@@ -804,7 +803,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             @SuppressLint("ClickableViewAccessibility")
             EditText placeNewEditText(int x, int y) {
-                final EditText et = new EditText(getApplicationContext());
+                EditText et = new EditText(getApplicationContext());
                 params = new RelativeLayout.LayoutParams(
                         RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                 params.leftMargin = x;
@@ -818,7 +817,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
                 et.setBackgroundColor(getResources().getColor(android.R.color.transparent));
                 et.setText(" ");
-                et.setTag(x + " " + y);
 
                 et.setOnFocusChangeListener(new OnFocusChangeListener() {
                     @Override
@@ -857,17 +855,31 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
                 et.setOnTouchListener(new View.OnTouchListener() {
+                    float x;
+                    float y;
+                    float prevX;
+                    float prevY;
+
                     @Override
                     public boolean onTouch(View v, MotionEvent e) {
-
+                        x = e.getX();
+                        y = e.getY();
                         switch (e.getAction()) {
                             case MotionEvent.ACTION_DOWN:
+                                prevX = x;
+                                prevY = y;
+                                return false;
 
-                                View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(v);
-                                v.startDrag(null, shadowBuilder, v, 0);
-                                return true;
+                            case MotionEvent.ACTION_UP:
+                                fabDelete.hide();
 
-                            //add ACTION UP
+                                return false;
+
+                            case MotionEvent.ACTION_MOVE:
+                                if (Math.abs(x - prevX) > 10 || Math.abs(y - prevY) > 10) {
+                                    View.DragShadowBuilder shadowBuilder = new View.DragShadowBuilder(v);
+                                    v.startDrag(null, shadowBuilder, v, 0);
+                                }
                         }
 
                         return false;
@@ -887,12 +899,14 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                                 mainView.invalidate();
                                 return true;
                             case DragEvent.ACTION_DRAG_STARTED:
+                                fabDelete.show();
                                 return true;
 
                             case DragEvent.ACTION_DRAG_EXITED:
                                 break;
 
                             case DragEvent.ACTION_DRAG_ENDED:
+                                fabDelete.hide();
                                 mainView.invalidate();
                                 return true;
 
@@ -910,16 +924,13 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 //                        View view = (View) e.getLocalState();
                         switch (e.getAction()) {
                             case DragEvent.ACTION_DROP:
-                                return true;
+                                break;
                             case DragEvent.ACTION_DRAG_STARTED:
-                                return true;
-
+                                break;
                             case DragEvent.ACTION_DRAG_EXITED:
                                 break;
-
                             case DragEvent.ACTION_DRAG_ENDED:
-                                return true;
-
+                                break;
                             default:
                                 break;
                         }
@@ -933,9 +944,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     imm.showSoftInput(et, InputMethodManager.SHOW_IMPLICIT);
                 }
                 et.setDrawingCacheEnabled(true);
-
                 return et;
             }
+
 
             boolean isRect() {return this.isRect;}
             boolean isOval() {return this.isOval;}
@@ -1018,6 +1029,36 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             final int action = event.getAction();
             mScaleGestureDetector.onTouchEvent(event);
 
+//            fabLayoutDelete.setOnDragListener(new View.OnDragListener() {
+//                @Override
+//                public boolean onDrag(View mainView, DragEvent e) {
+//                    View view = (View) e.getLocalState();
+//                    switch (e.getAction()) {
+//                        case DragEvent.ACTION_DROP:
+//                            relativeLayout.removeView(view);
+//                            mainView.invalidate();
+//                            return true;
+//                        case DragEvent.ACTION_DRAG_STARTED:
+//                            fabDelete.show();
+//                            return true;
+//
+//                        case DragEvent.ACTION_DRAG_EXITED:
+//                            fabDelete.hide();
+//                            break;
+//
+//                        case DragEvent.ACTION_DRAG_ENDED:
+//                            fabDelete.hide();
+//                            mainView.invalidate();
+//                            return true;
+//
+//                        default:
+//                            break;
+//                    }
+//
+//                    return true;
+//                }
+//            });
+
 
             switch (action & MotionEvent.ACTION_MASK) {
 
@@ -1086,8 +1127,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             }
                         } else { // if it's an existing drawing
                             if (touchedDrawing != null) {
-                                trashcanRect = Utils.getViewRect(fabLayoutDelete);
+
                                 touchedDrawing.offsetDrawing(x - mX,y - mY);
+                                trashcanRect = Utils.getViewRect(fabLayoutDelete);
 
                                 if (trashcanRect != null) {
                                     if (trashcanRect.contains((int) event.getRawX(), (int) event.getRawY())) {
