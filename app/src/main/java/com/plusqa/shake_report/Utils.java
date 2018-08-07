@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.util.TypedValue;
@@ -154,7 +155,7 @@ public class Utils {
         v.getDrawingRect(r);
         v.getLocationOnScreen(location);
         r.offset(location[0], location[1]);
-
+        r.left -= 30; r.top -= 30; r.right += 30; r.bottom += 30;
         return r;
     }
 
@@ -164,6 +165,7 @@ public class Utils {
         v.getDrawingRect(r);
         v.getLocationOnScreen(location);
         r.offset(location[0], location[1]);
+        r.left -= 30; r.top -= 30; r.right += 30; r.bottom += 30;
         return r.contains(x, y);
     }
 
