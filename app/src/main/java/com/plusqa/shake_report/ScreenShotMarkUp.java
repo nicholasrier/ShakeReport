@@ -5,7 +5,6 @@ import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
-import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -13,6 +12,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -31,7 +31,6 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -67,6 +66,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
     boolean isFABOpen=false;
+    boolean didOnce = false;
 
     RelativeLayout relativeLayout;
 
@@ -92,6 +92,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private boolean isShapeSaved = false;
     private boolean isDrawSaved  = false;
 
+    boolean isViewInTrash = false;
     boolean isShapeOptionVisible = false;
 
     private View.OnTouchListener handleTouch;
@@ -107,7 +108,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private int toolIconID2;
     private int toolIconID3;
 
-    OptionMenuTouchListener shapeOptionTouchListener;
+//    OptionMenuTouchListener shapeOptionTouchListener;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -118,7 +119,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         //Set up toolbar
         Toolbar mTopToolbar = findViewById(R.id.my_toolbar);
         setSupportActionBar(mTopToolbar);
-//        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
 
         //load screenshot into screenShotImageView
@@ -235,9 +235,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         switch (item.getItemId()) {
             case android.R.id.undo:
+                screenShotView.undo();
                 return true;
 
             case android.R.id.redo:
+                screenShotView.redo();
                 return true;
 
             case R.id.action_done:
@@ -685,7 +687,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     }
 
 
-
     public class ImageViewTouchWithDraw extends android.support.v7.widget.AppCompatImageView {
 
         private Bitmap  mBitmap;
@@ -694,24 +695,32 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         private int firstPointerIndex = -1;
         private int firstPointerID = -1;
         private boolean isNewLine = false;
+        private boolean isNewDrawing = false;
         private Rect trashcanRect;
-        private EditText editText;
-        private RelativeLayout.LayoutParams params;
-
         private Paint selectedPaint;
 
         public class DrawAction {
+
             Path path;
             Paint paint;
             RectF rectF;
             Bitmap textBitmap;
             Path.Direction dir = Path.Direction.CW;
             ArrayList<PointF> points = new ArrayList<>();
+            EditText editText;
+            DrawAction editedState;
+            boolean deleted = false;
+            private RelativeLayout.LayoutParams params;
+
             private final boolean isRect, isOval, isText, isLine;
+            private boolean isDelete, isAdjust, isTextChange;
             static final int IS_RECT = 1;
             static final int IS_OVAL = 2;
             static final int IS_TEXT = 4;
             static final int IS_LINE = 8;
+            static final int IS_DELETE = 12;
+            static final int IS_ADJUST = 16;
+            static final int IS_TEXT_CHANGE = 20;
 
             DrawAction(Path path, Paint paint, RectF rectF, int flag){
                 this.path = path;
@@ -722,6 +731,30 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 this.isText = (flag & IS_TEXT) == IS_TEXT;
                 this.isLine = (flag & IS_LINE) == IS_LINE;
                 this.isRect = (flag & IS_RECT) == IS_RECT;
+
+                setEdit(0);
+
+                init();
+
+            }
+
+            // construct a copy with an optional edit flag
+            DrawAction(DrawAction drawActionToCopy, int editFlag) {
+                this.path = drawActionToCopy.path;
+                this.paint = drawActionToCopy.paint;
+                this.rectF = drawActionToCopy.rectF;
+
+                this.isOval = drawActionToCopy.isOval();
+                this.isText = drawActionToCopy.isText();
+                this.isLine = drawActionToCopy.isLine();
+                this.isRect = drawActionToCopy.isRect();
+
+                setEdit(editFlag);
+
+                init();
+            }
+
+            private void init() {
 
                 addShapeToPath();
                 PointF firstPoint = new PointF(rectF.centerX(), rectF.centerY());
@@ -736,21 +769,24 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     editText.getDrawingRect(r);
                     this.rectF.set(r);
                 }
+
             }
 
             void offsetDrawing(float offsetX, float offsetY) {
+
                 if (isRect || isOval) {
                     rectF.offsetTo(rectF.left + offsetX,
                             rectF.top + offsetY);
                     addShapeToPath();
                 }
-                if (isLine) {
 
+                if (isLine) {
                     for (PointF p : points ) {
                         p.set(p.x += offsetX, p.y += offsetY);
                     }
                     path.offset(offsetX, offsetY);
                 }
+
                 if (isText) {
                     rectF.offsetTo(rectF.left + offsetX,
                             rectF.top + offsetY);
@@ -817,7 +853,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 et.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
                 et.setBackgroundColor(getResources().getColor(android.R.color.transparent));
                 et.setText(" ");
+                et.setDrawingCacheEnabled(true);
 
+                //Handles the keyboard opening and closing while editing image
                 et.setOnFocusChangeListener(new OnFocusChangeListener() {
                     @Override
                     public void onFocusChange(View v, boolean hasFocus) {
@@ -838,6 +876,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                         } else { // if closing keyboard
                             // Return to previous tool
+                            textBitmap = editText.getDrawingCache();
                             if (isDrawSaved || isShapeSaved) {
                                 //prevents drawing when deselecting text
                                 dontMove = true;
@@ -853,7 +892,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     }
                 });
 
-
+                //Initiates text dragging after a threshold is breached
                 et.setOnTouchListener(new View.OnTouchListener() {
                     float x;
                     float y;
@@ -871,8 +910,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                                 return false;
 
                             case MotionEvent.ACTION_UP:
-                                fabDelete.hide();
-
                                 return false;
 
                             case MotionEvent.ACTION_MOVE:
@@ -883,30 +920,42 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         }
 
                         return false;
-
                     }
                 });
 
+                // allows user to drop text on screen
+                // listens for when the dragged text leaves the delete bounds
                 relativeLayout.setOnDragListener(new View.OnDragListener() {
                     @Override
                     public boolean onDrag(View mainView, DragEvent e) {
                         View view = (View) e.getLocalState();
+
                         switch (e.getAction()) {
                             case DragEvent.ACTION_DROP:
                                 view.setX(e.getX() - (view.getWidth() / 2));
                                 view.setY(e.getY() - (view.getHeight() / 2));
                                 view.invalidate();
+
                                 mainView.invalidate();
                                 return true;
                             case DragEvent.ACTION_DRAG_STARTED:
                                 fabDelete.show();
                                 return true;
-
+                            case DragEvent.ACTION_DRAG_LOCATION:
+                                Point touchPos = Utils.getTouchPositionFromDragEvent(mainView, e);
+                                if (Utils.isTouchInsideOfView(mainView, touchPos)) {
+                                    if (isViewInTrash) {
+                                        fabDelete.setScaleX(1);
+                                        fabDelete.setScaleY(1);
+                                        isViewInTrash = false;
+                                    }
+                                }
+                                return false;
                             case DragEvent.ACTION_DRAG_EXITED:
                                 break;
 
                             case DragEvent.ACTION_DRAG_ENDED:
-                                fabDelete.hide();
+//                                fabDelete.hide();
                                 mainView.invalidate();
                                 return true;
 
@@ -918,14 +967,55 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     }
                 });
 
+                //hides delete fab when text finishes drag
                 et.setOnDragListener(new View.OnDragListener() {
                     @Override
-                    public boolean onDrag(View mainView, DragEvent e) {
-//                        View view = (View) e.getLocalState();
+                    public boolean onDrag(View v, DragEvent e) {
                         switch (e.getAction()) {
                             case DragEvent.ACTION_DROP:
                                 break;
                             case DragEvent.ACTION_DRAG_STARTED:
+                                break;
+                            case DragEvent.ACTION_DRAG_LOCATION:
+                                return false;
+                            case DragEvent.ACTION_DRAG_EXITED:
+                                break;
+                            case DragEvent.ACTION_DRAG_ENDED:
+                                fabDelete.hide();
+                                break;
+                            default:
+                                break;
+                        }
+
+                        return true;
+                    }
+                });
+
+                //Deletes editText when dropped into delete layout
+                //Detects if text is dragged into delete layout
+                fabLayoutDelete.setOnDragListener(new View.OnDragListener() {
+                    @Override
+                    public boolean onDrag(View mainView, DragEvent e) {
+                        View view = (View) e.getLocalState();
+                        switch (e.getAction()) {
+                            case DragEvent.ACTION_DROP:
+                                if (isViewInTrash) {
+                                    relativeLayout.removeView(view);
+
+                                    fabDelete.hide();
+                                }
+                                break;
+                            case DragEvent.ACTION_DRAG_STARTED:
+                                break;
+                            case DragEvent.ACTION_DRAG_LOCATION:
+                                Point touchPos = Utils.getTouchPositionFromDragEvent(mainView, e);
+                                if (Utils.isTouchInsideOfView(mainView, touchPos)) {
+                                    if (!isViewInTrash) {
+                                        fabDelete.setScaleX(1.3f);
+                                        fabDelete.setScaleY(1.3f);
+                                        isViewInTrash = true;
+                                    }
+                                }
                                 break;
                             case DragEvent.ACTION_DRAG_EXITED:
                                 break;
@@ -934,7 +1024,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             default:
                                 break;
                         }
-
                         return true;
                     }
                 });
@@ -943,19 +1032,37 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 if (imm != null) {
                     imm.showSoftInput(et, InputMethodManager.SHOW_IMPLICIT);
                 }
-                et.setDrawingCacheEnabled(true);
+
                 return et;
             }
-
 
             boolean isRect() {return this.isRect;}
             boolean isOval() {return this.isOval;}
             boolean isLine() {return this.isLine;}
             boolean isText() {return this.isText;}
+            boolean isDelete() {return this.isDelete;}
+            boolean isAdjust() {return this.isAdjust;}
+            boolean isTextChange() {return this.isTextChange;}
+
+            boolean isEdit() {
+
+                boolean isEdit = false;
+                if (this.isDelete || this.isAdjust || this.isTextChange) {
+                    isEdit = true;
+                }
+                return isEdit;
+            }
+
+            void setEdit(int editFlag) {
+                this.isDelete = (editFlag & IS_DELETE) == IS_DELETE;
+                this.isAdjust = (editFlag & IS_ADJUST) == IS_ADJUST;
+                this.isTextChange = (editFlag & IS_TEXT_CHANGE) == IS_TEXT_CHANGE;
+            }
 
         }
 
         ArrayList<DrawAction> actionsList = new ArrayList<>();
+        ArrayList<DrawAction> redoList = new ArrayList<>();
         private DrawAction touchedDrawing;
 
         public void setSelectedPaint(int color) {
@@ -994,19 +1101,131 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             canvas.drawBitmap(mBitmap, 0, 0, null);
 
             for (DrawAction drawAction : actionsList) {
-                if (drawAction.isText()) {
-                    if (drawAction.textBitmap != null) {
-                        canvas.drawBitmap(drawAction.textBitmap, null,
-                                drawAction.rectF, drawAction.paint);
-                    }
-                } else {
-                    canvas.drawPath(drawAction.path, drawAction.paint);
-                }
+                if (!drawAction.deleted && !drawAction.isEdit()) {
 
+                    if (drawAction.isText()) {
+                        if (drawAction.textBitmap != null) {
+                            canvas.drawBitmap(drawAction.textBitmap, null,
+                                    drawAction.rectF, drawAction.paint);
+                        }
+                    } else {
+                        canvas.drawPath(drawAction.path, drawAction.paint);
+                    }
+
+                }
             }
 
             canvas.save();
         }
+
+
+        public void undo() {
+
+            int sizeAL = actionsList.size() - 1;
+
+            DrawAction latestAction = actionsList.get(sizeAL);
+
+
+            if (latestAction.isEdit()) { // Undo edits
+
+                DrawAction drawAction;
+                for (int i = 0; i < sizeAL; i++) { // Search for corresponding drawing
+                    drawAction = actionsList.get(i);
+
+                    if ((latestAction.editedState == drawAction) &&
+                            (!drawAction.isEdit())) { // If drawAction is the drawing and not an edit
+
+                        if (latestAction.isDelete()) { // undo delete
+
+                            // Set deletion flag to false
+                            drawAction.deleted = false;
+
+                            // Add delete action to redo list
+                            redoList.add(latestAction);
+
+                            // Remove delete action from done actions
+                            actionsList.remove(sizeAL - 1);
+
+                        } else if (latestAction.isAdjust()) { // undo adjust
+
+                            // Reset drawing to previous state
+                            actionsList.set(i, new DrawAction(latestAction, 0));
+
+                            // Add adjust action to redo list
+                            redoList.add(latestAction);
+
+                            // Remove adjust action from done actions
+                            actionsList.remove(sizeAL - 1);
+                        }
+
+                    }
+                }
+
+            } else { // If latest action was creating a new drawing
+
+                // Add the drawing to the redo list
+                redoList.add(latestAction);
+
+                // Remove the drawing from done actions
+                actionsList.remove(latestAction);
+            }
+        }
+
+        public void redo() {
+
+            int sizeAL = actionsList.size() - 1;
+            int sizeRL = redoList.size() - 1;
+
+            DrawAction latestUndo = redoList.get(sizeRL);
+
+            if (latestUndo.isEdit()) { // Redo edits
+
+                DrawAction drawAction;
+                for (int i = 0; i < sizeAL; i++) { // Search for corresponding shape
+                    drawAction = actionsList.get(i);
+
+                    if ((latestUndo.editedState == drawAction) &&
+                            (!drawAction.isEdit())) { // If drawAction is the drawing and not an edit
+
+
+                        if (latestUndo.isDelete()) { // Redo delete
+
+                            // Reset deletion flag
+                            drawAction.deleted = false;
+
+                            // Re-add delete action to done actions
+                            actionsList.add(latestUndo);
+
+                            // Remove delete action from redo list
+                            redoList.remove(sizeRL);
+
+
+                        } else if (latestUndo.isAdjust()) { // Redo adjust
+
+                            // Reset drawing to adjusted state
+                            drawAction = latestUndo.editedState;
+
+                            // Re-add delete action to done actions
+                            actionsList.add(latestUndo);
+
+                            // Remove delete action from redo list
+                            redoList.remove(sizeRL);
+                        }
+
+                    }
+                }
+
+            } else {
+
+                // Re-add action to done actions
+                actionsList.add(latestUndo);
+
+                // Remove action from redo list
+                redoList.remove(latestUndo);
+            }
+        }
+
+
 
         private float mX, mY;
         private static final float TOUCH_TOLERANCE = 4;
@@ -1014,6 +1233,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         private ScaleGestureDetector mScaleGestureDetector;
         private boolean isDrawingInTrash = false;
         private View currentView;
+        private DrawAction editAction;
+
         @Override
         public boolean performClick() {
             return super.performClick();
@@ -1028,37 +1249,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             currentView = getCurrentFocus();
             final int action = event.getAction();
             mScaleGestureDetector.onTouchEvent(event);
-
-//            fabLayoutDelete.setOnDragListener(new View.OnDragListener() {
-//                @Override
-//                public boolean onDrag(View mainView, DragEvent e) {
-//                    View view = (View) e.getLocalState();
-//                    switch (e.getAction()) {
-//                        case DragEvent.ACTION_DROP:
-//                            relativeLayout.removeView(view);
-//                            mainView.invalidate();
-//                            return true;
-//                        case DragEvent.ACTION_DRAG_STARTED:
-//                            fabDelete.show();
-//                            return true;
-//
-//                        case DragEvent.ACTION_DRAG_EXITED:
-//                            fabDelete.hide();
-//                            break;
-//
-//                        case DragEvent.ACTION_DRAG_ENDED:
-//                            fabDelete.hide();
-//                            mainView.invalidate();
-//                            return true;
-//
-//                        default:
-//                            break;
-//                    }
-//
-//                    return true;
-//                }
-//            });
-
 
             switch (action & MotionEvent.ACTION_MASK) {
 
@@ -1096,8 +1286,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     if (!isNewLine && !(currentView instanceof EditText)) {
                         fabDelete.show();
                     }
-
-
 
                     invalidate();
                     firstPointerIndex = event.getActionIndex();
@@ -1160,11 +1348,47 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 case MotionEvent.ACTION_UP:
                     fabCurrentTool.show();
                     fabDelete.hide();
-                    if (isDrawingInTrash) {
-                        actionsList.remove(touchedDrawing);
+
+                    if (touchedDrawing != null) {
+                        if (isDrawingInTrash) { // flag drawing for deletion and save action
+
+                            // Revert adjustments when deleting
+                            touchedDrawing = editAction;
+
+                            // Mark the drawing to be deleted so that it's ignored in onDraw()
+                            touchedDrawing.deleted = true;
+
+                            // Designate that new action is delete
+                            editAction.setEdit(DrawAction.IS_DELETE);
+
+                            // For ease of use in undo/redo
+                            editAction.editedState = touchedDrawing;
+
+                            // Add the delete action to the list of done actions
+                            actionsList.add(editAction);
+
+
+                        } else if (!isNewDrawing) { // save adjust action
+
+                            // Designate that new action is adjustment
+                            editAction.setEdit(DrawAction.IS_ADJUST);
+
+                            // Save the edited object in the adjust action
+                            editAction.editedState = touchedDrawing;
+
+                            // Add the adjust action to the list of done actions
+                            actionsList.add(editAction);
+
+                            // If any action is taken, clear redo list
+                            redoList.clear();
+
+                        }
+
+                        isNewDrawing = false;
                         isDrawingInTrash = false;
                     }
-                    touchedDrawing = null;
+
+                    editAction = null;
 
                     invalidate();
                     break;
@@ -1179,10 +1403,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         fabCurrentTool.show();
                         fabDelete.hide();
                         firstPointerID = -1;
-                    } else if (isShapesSelected) {
-
-                    } else if (isTextSelected) {
-
                     }
                     invalidate();
                     break;
@@ -1197,13 +1417,21 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             DrawAction touched = null;
 
             for (DrawAction drawAction : actionsList) {
-                if (drawAction.contains(xTouch,yTouch)) {
+                if (!drawAction.isEdit() && drawAction.contains(xTouch,yTouch)) {
                     touched = drawAction;
                     isNewLine = false;
+                    isNewDrawing = false;
+
+                    //Make a copy of original state
+                    editAction = touched;
                 }
             }
 
             if ( (null == touched) ) {
+                isNewDrawing = true;
+
+                // If any action is taken, clear redo list
+                redoList.clear();
 
                 int shapeFlag = 0;
 

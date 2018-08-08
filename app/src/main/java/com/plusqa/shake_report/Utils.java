@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.DragEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
@@ -159,6 +161,19 @@ public class Utils {
         return r;
     }
 
+    public static boolean isViewOverlapping(View firstView, View secondView) {
+
+        final int[] location = new int[2];
+
+        firstView.getLocationInWindow(location);
+        Rect rect1 = new Rect(location[0], location[1],location[0] + firstView.getWidth(), location[1] + firstView.getHeight());
+
+        secondView.getLocationInWindow(location);
+        Rect rect2 = new Rect(location[0], location[1],location[0] + secondView.getWidth(), location[1] + secondView.getHeight());
+
+        return rect1.intersect(rect2);
+    }
+
     public static boolean isViewInBounds(View v, int x, int y){
         Rect r = new Rect();
         int[] location = new int[2];
@@ -174,5 +189,24 @@ public class Utils {
         return (rect.contains(centerX, centerY));
     }
 
+
+    public static Point getTouchPositionFromDragEvent(View item, DragEvent event) {
+        Rect rItem = new Rect();
+        item.getGlobalVisibleRect(rItem);
+//        rItem = getViewRect(item);
+        return new Point(rItem.left + Math.round(event.getX()), rItem.top + Math.round(event.getY()));
+    }
+
+    public static boolean isTouchInsideOfView(View view, Point touchPosition) {
+        Rect rScroll = new Rect();
+        view.getGlobalVisibleRect(rScroll);
+//        rScroll = getViewRect(view);
+        return isTouchInsideOfRect(touchPosition, rScroll);
+    }
+
+    public static boolean isTouchInsideOfRect(Point touchPosition, Rect rScroll) {
+        return touchPosition.x > rScroll.left && touchPosition.x < rScroll.right //within x axis / width
+                && touchPosition.y > rScroll.top && touchPosition.y < rScroll.bottom; //withing y axis / height
+    }
 
 }
