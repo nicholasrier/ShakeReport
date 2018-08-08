@@ -234,12 +234,18 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
 
         switch (item.getItemId()) {
-            case android.R.id.undo:
-                screenShotView.undo();
+            case R.id.action_undo:
+                if (screenShotView.actionsList.size() > 0) {
+                    screenShotView.undo();
+                }
+
                 return true;
 
-            case android.R.id.redo:
-                screenShotView.redo();
+            case R.id.action_redo:
+                if (screenShotView.redoList.size() > 0) {
+                    screenShotView.redo();
+                }
+
                 return true;
 
             case R.id.action_done:
@@ -738,22 +744,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             }
 
-            // construct a copy with an optional edit flag
-            DrawAction(DrawAction drawActionToCopy, int editFlag) {
-                this.path = drawActionToCopy.path;
-                this.paint = drawActionToCopy.paint;
-                this.rectF = drawActionToCopy.rectF;
-
-                this.isOval = drawActionToCopy.isOval();
-                this.isText = drawActionToCopy.isText();
-                this.isLine = drawActionToCopy.isLine();
-                this.isRect = drawActionToCopy.isRect();
-
-                setEdit(editFlag);
-
-                init();
-            }
-
             private void init() {
 
                 addShapeToPath();
@@ -1044,6 +1034,25 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             boolean isAdjust() {return this.isAdjust;}
             boolean isTextChange() {return this.isTextChange;}
 
+            int getEditFlag() {
+                int flag = 0;
+                if (isDelete) flag = IS_DELETE;
+                if (isAdjust) flag = IS_ADJUST;
+                if (isTextChange) flag = IS_TEXT_CHANGE;
+
+                return flag;
+            }
+
+            int getDrawingFlag() {
+                int flag = 0;
+                if (isRect) flag = IS_RECT;
+                if (isOval) flag = IS_OVAL;
+                if (isLine) flag = IS_LINE;
+                if (isText) flag = IS_TEXT;
+
+                return flag;
+            }
+
             boolean isEdit() {
 
                 boolean isEdit = false;
@@ -1118,18 +1127,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             canvas.save();
         }
 
-
         public void undo() {
 
             int sizeAL = actionsList.size() - 1;
 
             DrawAction latestAction = actionsList.get(sizeAL);
-
-
+            boolean undoAction = false;
             if (latestAction.isEdit()) { // Undo edits
 
                 DrawAction drawAction;
-                for (int i = 0; i < sizeAL; i++) { // Search for corresponding drawing
+                for (int i = 0; i <= sizeAL; i++) { // Search for corresponding drawing
                     drawAction = actionsList.get(i);
 
                     if ((latestAction.editedState == drawAction) &&
@@ -1140,25 +1147,41 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                             // Set deletion flag to false
                             drawAction.deleted = false;
 
-                            // Add delete action to redo list
-                            redoList.add(latestAction);
-
-                            // Remove delete action from done actions
-                            actionsList.remove(sizeAL - 1);
+                            // Set flag to delete after loop
+                            undoAction = true;
 
                         } else if (latestAction.isAdjust()) { // undo adjust
 
-                            // Reset drawing to previous state
-                            actionsList.set(i, new DrawAction(latestAction, 0));
+                            // Get values to construct action in previous state
+                            Path prevPath = new Path(latestAction.path);
+                            Paint prevPaint = new Paint(latestAction.paint);
+                            RectF prevRectF = new RectF(latestAction.rectF);
+                            int prevFlag = latestAction.getDrawingFlag();
 
-                            // Add adjust action to redo list
-                            redoList.add(latestAction);
+                            ArrayList<PointF> temp = new ArrayList<>();
+                            for (PointF p : latestAction.points) {
+                                if (p != null) {
+                                    temp.add(new PointF(p.x, p.y));
+                                }
+                            }
 
-                            // Remove adjust action from done actions
-                            actionsList.remove(sizeAL - 1);
+                            // create a new action in unadjusted state
+                            DrawAction previousState = new DrawAction(prevPath, prevPaint,
+                                    prevRectF, prevFlag);
+                            previousState.points = temp;
+                            actionsList.set(i, previousState);
+
+                            // Set flag to undo after loop
+                            undoAction = true;
                         }
-
                     }
+                }
+                if (undoAction) {
+                    // Add latest action to redo list
+                    redoList.add(latestAction);
+
+                    // Remove latest action from done actions
+                    actionsList.remove(latestAction);
                 }
 
             } else { // If latest action was creating a new drawing
@@ -1168,7 +1191,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 // Remove the drawing from done actions
                 actionsList.remove(latestAction);
+
             }
+            invalidate();
         }
 
         public void redo() {
@@ -1181,12 +1206,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             if (latestUndo.isEdit()) { // Redo edits
 
                 DrawAction drawAction;
-                for (int i = 0; i < sizeAL; i++) { // Search for corresponding shape
+                for (int i = 0; i <= sizeAL; i++) { // Search for corresponding shape
                     drawAction = actionsList.get(i);
 
                     if ((latestUndo.editedState == drawAction) &&
                             (!drawAction.isEdit())) { // If drawAction is the drawing and not an edit
-
 
                         if (latestUndo.isDelete()) { // Redo delete
 
@@ -1223,6 +1247,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 // Remove action from redo list
                 redoList.remove(latestUndo);
             }
+
+            invalidate();
         }
 
 
@@ -1353,7 +1379,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         if (isDrawingInTrash) { // flag drawing for deletion and save action
 
                             // Revert adjustments when deleting
-                            touchedDrawing = editAction;
+                            touchedDrawing.path = editAction.path;
+                            touchedDrawing.rectF = editAction.rectF;
+                            touchedDrawing.paint = editAction.paint;
+                            touchedDrawing.setEdit(0);
 
                             // Mark the drawing to be deleted so that it's ignored in onDraw()
                             touchedDrawing.deleted = true;
@@ -1422,8 +1451,20 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     isNewLine = false;
                     isNewDrawing = false;
 
+                    Path editPath = new Path(drawAction.path);
+                    Paint editPaint = new Paint(drawAction.paint);
+                    RectF editRectF = new RectF(drawAction.rectF);
+                    int editFlag = drawAction.getDrawingFlag();
+
+                    ArrayList<PointF> temp = new ArrayList<>();
+                    for (PointF p : drawAction.points) {
+                        if (p != null) {
+                            temp.add(new PointF(p.x, p.y));
+                        }
+                    }
                     //Make a copy of original state
-                    editAction = touched;
+                    editAction = new DrawAction(editPath, editPaint, editRectF, editFlag);
+                    editAction.points = temp;
                 }
             }
 
