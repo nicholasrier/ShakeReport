@@ -912,6 +912,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 //                                    drawAction.rectF, drawAction.paint);
                         }
                     } else {
+
                         canvas.drawPath(drawAction.path, drawAction.paint);
                     }
 
@@ -1669,25 +1670,39 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 }
             }
 
-
         }
 
 
 
 
-        // ok here we go
 
-        public class DrawRect implements com.plusqa.shake_report.DrawAction {
 
-            Path path;
+
+
+
+
+        // Path Objects
+
+        public class RectFDrawing extends Path implements Drawing {
             RectF rectF;
-            Path.Direction dir = Path.Direction.CW;
             Paint paint;
+            Boolean deleted = false;
 
-            DrawRect(Path path, RectF rectF, Paint paint, float x, float y) {
-                this.path = path;
+            RectFDrawing(RectF rectF, Paint paint) {
+                super();
                 this.rectF = rectF;
                 this.paint = paint;
+                addToPath();
+            }
+
+            //Copy constructor
+            private RectFDrawing(RectFDrawing drawingToCopy) {
+                super();
+                RectF rectFCopy = new RectF(drawingToCopy.rectF);
+                Paint paintCopy = new Paint(drawingToCopy.paint);
+
+                this.rectF = rectFCopy;
+                this.paint = paintCopy;
                 addToPath();
             }
 
@@ -1697,29 +1712,55 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public void offset(float offsetX, float offsetY) {
+            public void offsetDrawing(float offsetX, float offsetY) {
                 rectF.offsetTo(rectF.left + offsetX,
                         rectF.top + offsetY);
                 addToPath();
             }
 
-            void addToPath() {
-                path.reset();
-                path.addRect(rectF, dir);
+            @Override
+            public Drawing copy() {
+                return new RectFDrawing(this);
             }
+
+            @Override
+            public void delete() {
+                deleted = true;
+            }
+
+            @Override
+            public void restore() {
+                deleted = false;
+            }
+
+            void addToPath() {
+                reset();
+                addRect(rectF, Path.Direction.CW);
+            }
+
         }
 
-        public class DrawOval implements com.plusqa.shake_report.DrawAction {
-
-            Path path;
+        public class OvalDrawing extends Path implements Drawing{
             RectF rectF;
-            Path.Direction dir = Path.Direction.CW;
             Paint paint;
+            Boolean deleted = false;
 
-            DrawOval(Path path, RectF rectF, Paint paint, float x, float y) {
-                this.path = path;
+            OvalDrawing(RectF rectF, Paint paint) {
+                super();
                 this.rectF = rectF;
                 this.paint = paint;
+                addToPath();
+            }
+
+            // Copy constructor
+            private OvalDrawing(OvalDrawing drawingToCopy) {
+                super();
+                RectF rectFCopy = new RectF(drawingToCopy.rectF);
+                Paint paintCopy = new Paint(drawingToCopy.paint);
+
+                this.rectF = rectFCopy;
+                this.paint = paintCopy;
+
                 addToPath();
             }
 
@@ -1733,29 +1774,61 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public void offset(float offsetX, float offsetY) {
+            public void offsetDrawing(float offsetX, float offsetY) {
                 rectF.offsetTo(rectF.left + offsetX,
                         rectF.top + offsetY);
                 addToPath();
             }
 
+            @Override
+            public Drawing copy() {
+                return new OvalDrawing(this);
+            }
+
+            @Override
+            public void delete() {
+                deleted = true;
+            }
+
+            @Override
+            public void restore() {
+                deleted = false;
+            }
+
             void addToPath() {
-                path.reset();
-                path.addOval(rectF, dir);
+                reset();
+                addOval(rectF, Path.Direction.CW);
             }
         }
 
-        public class DrawLine implements com.plusqa.shake_report.DrawAction {
+        public class LineDrawing extends Path implements Drawing {
 
-            Path path;
+            ArrayList<PointF> points;
             Paint paint;
-            ArrayList<PointF> points = new ArrayList<>();
+            Boolean deleted = false;
 
-            DrawLine(Path path, PointF p, Paint paint) {
-                this.path = path;
-                points.add(p);
+            LineDrawing(ArrayList<PointF> points, Paint paint) {
+                super();
+                this.points = points;
                 this.paint = paint;
-                path.moveTo(p.x, p.y);
+            }
+
+            // Copy constructor
+            private LineDrawing(LineDrawing drawingToCopy) {
+                super();
+
+                ArrayList<PointF> pointsCopy = new ArrayList<>();
+
+                for (PointF p : this.points) {
+                    if (p != null) {
+                        pointsCopy.add(new PointF(p.x, p.y));
+                    }
+                }
+
+                Paint paintCopy = new Paint(this.paint);
+
+                this.points = pointsCopy;
+                this.paint = paintCopy;
             }
 
             @Override
@@ -1772,56 +1845,116 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public void offset(float offsetX, float offsetY) {
+            public void offsetDrawing(float offsetX, float offsetY) {
                 for (PointF p : points ) {
                     p.set(p.x += offsetX, p.y += offsetY);
                 }
-                path.offset(offsetX, offsetY);
+                offset(offsetX, offsetY);
             }
 
-            void addToPath(float x, float y) {
-                PointF prevPoint = points.get(points.size() - 1);
-                path.quadTo(prevPoint.x, prevPoint.y,
-                        (x + prevPoint.x) / 2, (y + prevPoint.y) / 2);
+            @Override
+            public Drawing copy() {
+                return new LineDrawing(this);
             }
+
+            @Override
+            public void delete() {
+                deleted = true;
+            }
+
+            @Override
+            public void restore() {
+                deleted = false;
+            }
+
         }
 
-        public class DrawText
-                extends android.support.v7.widget.AppCompatEditText
-                implements com.plusqa.shake_report.DrawAction {
 
-            public DrawText(Context context) {
-                super(context);
+
+
+        // Actions
+
+        public class MakeDrawing implements Action {
+
+            Drawing drawing;
+            ArrayList<Drawing> drawings;
+            int index;
+
+
+            MakeDrawing(Drawing drawing, ArrayList<Drawing> drawings) {
+
+                this.drawing = drawing;
+                this.drawings = drawings;
+
             }
 
             @Override
-            public boolean contains(float x, float y) {
-                return false;
+            public void undoAction() {
+                index = drawings.indexOf(drawing);
+                drawings.remove(drawing);
             }
+
 
             @Override
-            public void offset(float offsetX, float offsetY) {
-
+            public void doAction() {
+                drawings.add(index, drawing);
             }
 
-            public void addToPath(float x, float y) {
-
-            }
         }
 
-        public class AdjustDrawing implements com.plusqa.shake_report.DrawAction {
+        public class AdjustDrawing implements Action {
 
-            @Override
-            public boolean contains(float x, float y) {
-                return false;
+            Drawing drawing;
+            Drawing savedState;
+            ArrayList<Drawing> drawings;
+
+            AdjustDrawing(Drawing drawing, ArrayList<Drawing> drawings) {
+                this.drawing = drawing;
+                this.drawings = drawings;
+                savedState = drawing.copy();
             }
 
             @Override
-            public void offset(float offsetX, float offsetY) {
+            public void undoAction() {
+                drawings.set(drawings.indexOf(drawing), savedState);
+            }
 
+            @Override
+            public void doAction() {
+                drawings.set(drawings.indexOf(savedState), drawing);
+            }
+
+        }
+
+        public class DeleteDrawing implements Action {
+
+            Drawing drawing;
+
+            DeleteDrawing(Drawing drawing) {
+                this.drawing = drawing;
+            }
+
+            @Override
+            public void undoAction() {
+                drawing.restore();
+            }
+
+            @Override
+            public void doAction() {
+                drawing.delete();
             }
         }
     }
+
+
+
+    // quadTo()
+
+//    void addToPath(float x, float y) {
+//        PointF prevPoint = points.get(points.size() - 1);
+//        path.quadTo(prevPoint.x, prevPoint.y,
+//                (x + prevPoint.x) / 2, (y + prevPoint.y) / 2);
+//    }
 }
 
 
