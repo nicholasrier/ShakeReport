@@ -1672,6 +1672,155 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         }
 
+
+
+
+        // ok here we go
+
+        public class DrawRect implements com.plusqa.shake_report.DrawAction {
+
+            Path path;
+            RectF rectF;
+            Path.Direction dir = Path.Direction.CW;
+            Paint paint;
+
+            DrawRect(Path path, RectF rectF, Paint paint, float x, float y) {
+                this.path = path;
+                this.rectF = rectF;
+                this.paint = paint;
+                addToPath();
+            }
+
+            @Override
+            public boolean contains(float x, float y) {
+                return this.rectF.contains(x, y);
+            }
+
+            @Override
+            public void offset(float offsetX, float offsetY) {
+                rectF.offsetTo(rectF.left + offsetX,
+                        rectF.top + offsetY);
+                addToPath();
+            }
+
+            void addToPath() {
+                path.reset();
+                path.addRect(rectF, dir);
+            }
+        }
+
+        public class DrawOval implements com.plusqa.shake_report.DrawAction {
+
+            Path path;
+            RectF rectF;
+            Path.Direction dir = Path.Direction.CW;
+            Paint paint;
+
+            DrawOval(Path path, RectF rectF, Paint paint, float x, float y) {
+                this.path = path;
+                this.rectF = rectF;
+                this.paint = paint;
+                addToPath();
+            }
+
+            @Override
+            public boolean contains(float x, float y) {
+                float dx = x - rectF.centerX();
+                float dy = y - rectF.centerY();
+                float width = rectF.width()/2;
+                float height = rectF.height()/2;
+                return (dx * dx) / (width * width) + (dy * dy) / (height * height) <= 1;
+            }
+
+            @Override
+            public void offset(float offsetX, float offsetY) {
+                rectF.offsetTo(rectF.left + offsetX,
+                        rectF.top + offsetY);
+                addToPath();
+            }
+
+            void addToPath() {
+                path.reset();
+                path.addOval(rectF, dir);
+            }
+        }
+
+        public class DrawLine implements com.plusqa.shake_report.DrawAction {
+
+            Path path;
+            Paint paint;
+            ArrayList<PointF> points = new ArrayList<>();
+
+            DrawLine(Path path, PointF p, Paint paint) {
+                this.path = path;
+                points.add(p);
+                this.paint = paint;
+                path.moveTo(p.x, p.y);
+            }
+
+            @Override
+            public boolean contains(float x, float y) {
+                boolean inside = false;
+                RectF bounds = new RectF(x - 65,y - 65,
+                        x + 65,y + 65);
+                for (PointF p : points ) {
+                    if (bounds.contains(p.x, p.y)) {
+                        inside = true;
+                    }
+                }
+                return inside;
+            }
+
+            @Override
+            public void offset(float offsetX, float offsetY) {
+                for (PointF p : points ) {
+                    p.set(p.x += offsetX, p.y += offsetY);
+                }
+                path.offset(offsetX, offsetY);
+            }
+
+            void addToPath(float x, float y) {
+                PointF prevPoint = points.get(points.size() - 1);
+                path.quadTo(prevPoint.x, prevPoint.y,
+                        (x + prevPoint.x) / 2, (y + prevPoint.y) / 2);
+            }
+        }
+
+        public class DrawText
+                extends android.support.v7.widget.AppCompatEditText
+                implements com.plusqa.shake_report.DrawAction {
+
+            public DrawText(Context context) {
+                super(context);
+            }
+
+            @Override
+            public boolean contains(float x, float y) {
+                return false;
+            }
+
+            @Override
+            public void offset(float offsetX, float offsetY) {
+
+            }
+
+            public void addToPath(float x, float y) {
+
+            }
+        }
+
+        public class AdjustDrawing implements com.plusqa.shake_report.DrawAction {
+
+            @Override
+            public boolean contains(float x, float y) {
+                return false;
+            }
+
+            @Override
+            public void offset(float offsetX, float offsetY) {
+
+            }
+        }
     }
 }
 
