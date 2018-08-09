@@ -101,6 +101,8 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
         int firstPointerIndex = -1;
         int firstPointerID = -1;
 
+        boolean isNewDrawing = false;
+
         mScaleGestureDetector.onTouchEvent(event);
 
         switch (action & MotionEvent.ACTION_MASK) {
@@ -110,7 +112,11 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
                 prevX = x;
                 prevY = y;
 
-                touchedDrawing = getTouchedDrawing(x, y);
+                isNewDrawing = isNewDrawing(x, y);
+
+                if (isNewDrawing && drawings.size() < 50) {
+                    makeDrawing(x, y);
+                }
 
                 firstPointerIndex = event.getActionIndex();
                 firstPointerID = event.getPointerId(firstPointerIndex);
@@ -118,8 +124,7 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
                 break;
 
             case MotionEvent.ACTION_MOVE:
-
-
+                if (touchedDrawing == null || currentPointerId == firstPointerID) break;
 
                 break;
 
@@ -139,33 +144,25 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
         return true;
     }
 
-    // Finds touched Drawing or places new Drawing at touch point
-    private Drawing getTouchedDrawing(float x, float y) {
-        Drawing touched = null;
+    // Returns true if placing new drawing
+    private boolean isNewDrawing(float x, float y) {
+
+        boolean isNew = true;
 
         for (Drawing drawing : drawings) {
 
             if (!drawing.isDeleted() && drawing.contains(x, y)) {
 
-                touched = drawing;
+                touchedDrawing = drawing;
 
                 action = new AdjustDrawing(drawing, drawings);
 
+                isNew = false;
+
             }
         }
 
-        if (touched == null) {
-            if (drawings.size() < 50) {
-
-                touched = makeDrawing(x, y);
-
-                action = new MakeDrawing(touched, drawings);
-
-                drawings.add(touched);
-            }
-        }
-
-        return touched;
+        return isNew;
     }
 
     public void initPaint(int defaultColor) {
@@ -220,10 +217,7 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
         undoneActions.remove(latestUndoneAction);
     }
 
-    private Drawing makeDrawing(float x, float y) {
-
-        Drawing drawing = null;
-        RectF rectF;
+    private void makeDrawing(float x, float y) {
 
         switch (toolFlag) {
 
@@ -233,34 +227,36 @@ public class ImageViewDraw extends android.support.v7.widget.AppCompatImageView 
                 ArrayList<PointF> pointFs = new ArrayList<>();
                 pointFs.add(pF);
 
-                drawing = new LineDrawing(pointFs, selectedPaint);
+                touchedDrawing = new LineDrawing(pointFs, selectedPaint);
 
                 break;
 
             case RECT_TOOL:
 
-                rectF = new RectF(x - 200,
+                RectF r = new RectF(x - 200,
                         y - 200,
                         x + 200,
                         y + 200);
 
-                drawing = new RectFDrawing(rectF, selectedPaint);
+                touchedDrawing = new RectFDrawing(r, selectedPaint);
 
                 break;
 
             case OVAL_TOOL:
 
-                rectF = new RectF(x - 200,
+                RectF o = new RectF(x - 200,
                         y - 200,
                         x + 200,
                         y + 200);
 
-                drawing = new OvalDrawing(rectF, selectedPaint);
+                touchedDrawing = new OvalDrawing(o, selectedPaint);
 
                 break;
         }
 
-        return drawing;
+        action = new MakeDrawing(touchedDrawing, drawings);
+
+        drawings.add(touchedDrawing);
 
     }
 
