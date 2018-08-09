@@ -1,15 +1,34 @@
 package com.plusqa.shake_report;
 
-public interface Drawing {
+import android.graphics.Paint;
+import android.graphics.Path;
 
-    boolean contains(float x, float y);
 
-    void offsetDrawing(float offsetX, float offsetY);
+public abstract class Drawing extends Path {
 
-    Drawing copy();
+    Paint paint;
+    Boolean deleted = false;
 
-    void delete();
+    public abstract boolean contains(float x, float y);
 
-    void restore();
+    public abstract void offsetDrawing(float offsetX, float offsetY);
+
+    public abstract Drawing copy();
+
+    public void delete() {
+        deleted = true;
+    }
+
+    void restore() {
+        deleted = false;
+    }
+
+    boolean isDeleted() {
+        return deleted;
+    }
+
+    Paint getPaint() {
+        return paint;
+    }
 
 }

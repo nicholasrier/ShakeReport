@@ -204,7 +204,7 @@ public class Utils {
         return isTouchInsideOfRect(touchPosition, rScroll);
     }
 
-    public static boolean isTouchInsideOfRect(Point touchPosition, Rect rScroll) {
+    private static boolean isTouchInsideOfRect(Point touchPosition, Rect rScroll) {
         return touchPosition.x > rScroll.left && touchPosition.x < rScroll.right //within x axis / width
                 && touchPosition.y > rScroll.top && touchPosition.y < rScroll.bottom; //withing y axis / height
     }
