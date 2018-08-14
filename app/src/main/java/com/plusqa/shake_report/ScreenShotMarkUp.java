@@ -16,6 +16,8 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -58,15 +60,15 @@ import java.util.ArrayList;
 
 public class ScreenShotMarkUp extends AppCompatActivity {
 
-    private ImageViewTouchWithDraw screenShotView;
+    private AnnotationView screenShotView;
 
     FloatingActionButton fabCurrentTool, fabTool1, fabTool2, fabShapeOption, fabTool3, fabDelete;
     FloatingActionButton colorFAB1, colorFAB2, colorFAB3;
     LinearLayout fabLayoutDraw, fabLayoutShapes, fabLayoutShapeOption,
-                 fabLayoutText, fabCurrentToolLayout, fabLayoutDelete, screenshotLayout;
+            fabLayoutText, fabCurrentToolLayout, fabLayoutDelete, screenshotLayout;
     LinearLayout fabLayoutRed, fabLayoutGreen, fabLayoutBlack;
     View fabBGLayout;
-    boolean isFABOpen=false;
+    boolean isFABOpen = false;
     boolean didOnce = false;
 
     RelativeLayout relativeLayout;
@@ -91,7 +93,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private boolean isTextSelected = false;
 
     private boolean isShapeSaved = false;
-    private boolean isDrawSaved  = false;
+    private boolean isDrawSaved = false;
 
     boolean isViewInTrash = false;
     boolean isShapeOptionVisible = false;
@@ -123,18 +125,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
 
         //load screenshot into screenShotImageView
-        screenShotView = new ImageViewTouchWithDraw(ScreenShotMarkUp.this, null);
+        screenShotView = new AnnotationView(ScreenShotMarkUp.this);
 
         screenShotView.setId(View.generateViewId());
         LinearLayout.LayoutParams lp =
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                                              LinearLayout.LayoutParams.MATCH_PARENT);
+                        LinearLayout.LayoutParams.MATCH_PARENT);
 
         screenShotView.setLayoutParams(lp);
-        screenShotView.setAdjustViewBounds(true);
         screenShotView.setBackgroundColor(ContextCompat.getColor(ScreenShotMarkUp.this, R.color.colorTransBg)
         );
-        screenShotView.setScaleType(ImageViewTouchWithDraw.ScaleType.FIT_XY);
         screenShotView.setFitsSystemWindows(false);
 
         //adding view to layout
@@ -142,8 +142,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         screenshotLayout.addView(screenShotView);
 
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
-        screenShotView.setImageBitmap(screenShotBM);
-
+        BitmapDrawable bitmapDrawable = new BitmapDrawable(getResources(), screenShotBM);
+        screenShotView.setBackground(bitmapDrawable);
+        screenShotView.setToolFlag(AnnotationView.DRAW_TOOL);
         final Paint currentPaint = new Paint();
         currentPaint.setAntiAlias(true);
         currentPaint.setDither(true);
@@ -203,9 +204,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabCurrentTool.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(!isFABOpen){
+                if (!isFABOpen) {
                     showFABMenu();
-                }else{
+                } else {
                     closeFABMenu();
                 }
             }
@@ -214,7 +215,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         fabBGLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isFABOpen) {
+                if (isFABOpen) {
                     if (!isShapeOptionVisible) {
                         closeFABMenu();
                     }
@@ -230,22 +231,21 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.screenshot_menu, menu);
         return true;
     }
-// Done button
+
+    // Done button
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
         switch (item.getItemId()) {
             case R.id.action_undo:
-                if (screenShotView.actionsList.size() > 0) {
-                    screenShotView.undo();
-                }
+
+                screenShotView.undo();
 
                 return true;
 
             case R.id.action_redo:
-                if (screenShotView.redoList.size() > 0) {
-                    screenShotView.redo();
-                }
+
+                screenShotView.redo();
 
                 return true;
 
@@ -312,7 +312,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     if (null != response) {
                         responseString = String.valueOf(response.statusCode);
-                        if(responseString.equals("200")) {
+                        if (responseString.equals("200")) {
                             text = "Report Sent!";
                         } else {
                             text = "Report did not send: " + responseString;
@@ -340,8 +340,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         return true;
     }
 
-    private void showFABMenu(){
-        isFABOpen=true;
+    private void showFABMenu() {
+        isFABOpen = true;
 
         fabCurrentTool.animate().rotationBy(180 - fabCurrentTool.getRotation());
         fabLayoutDraw.animate().translationY(-getResources().getDimension(R.dimen.standard_55));
@@ -379,13 +379,13 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         });
     }
 
-    private void closeFABMenu(){
-        isFABOpen=false;
+    private void closeFABMenu() {
+        isFABOpen = false;
 
         fabLayoutRed.animate().translationX(0);
         fabLayoutGreen.animate().translationX(0);
         fabLayoutBlack.animate().translationX(0);
-        fabCurrentTool.animate().rotationBy(fabCurrentTool.getRotation()*-1);
+        fabCurrentTool.animate().rotationBy(fabCurrentTool.getRotation() * -1);
         fabLayoutDraw.animate().translationY(0);
         fabLayoutShapes.animate().translationY(0);
         fabLayoutText.animate().translationY(0).setListener(new Animator.AnimatorListener() {
@@ -397,7 +397,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                if(!isFABOpen){
+                if (!isFABOpen) {
                     fabLayoutDraw.setVisibility(View.GONE);
                     fabLayoutShapes.setVisibility(View.GONE);
                     fabLayoutText.setVisibility(View.GONE);
@@ -412,32 +412,29 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public void onAnimationCancel(Animator animator) { }
+            public void onAnimationCancel(Animator animator) {
+            }
+
             @Override
-            public void onAnimationRepeat(Animator animator) { }
+            public void onAnimationRepeat(Animator animator) {
+            }
         });
 
     }
 
     @Override
     public void onBackPressed() {
-        if(isFABOpen){
+        if (isFABOpen) {
             closeFABMenu();
-        }else{
+        } else {
             super.onBackPressed();
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     public void tapTool(View v) {
-        if(isFABOpen){
+        if (isFABOpen) {
             int iconID;
-            View.OnTouchListener listener = new View.OnTouchListener() {
-                @Override
-                public boolean onTouch(View v, MotionEvent event) {
-                    return false;
-                }
-            };
 
             if (v == fabTool1) {
                 iconID = toolIconID1;
@@ -461,18 +458,30 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             isTextSelected = currentIconID == textIconID;
 
             isShapesSelected = (currentIconID == squareIconID) || (currentIconID == circlesIconID);
+
             if (isShapesSelected)
                 shapeIconID = (currentIconID == squareIconID) ? squareIconID : circlesIconID;
 
-
             closeFABMenu();
+
             fabCurrentTool.setImageResource(currentIconID);
+
+            if (isDrawSelected) {
+                screenShotView.setToolFlag(AnnotationView.DRAW_TOOL);
+            } else if (isShapesSelected) {
+                if (shapeIconID == squareIconID) {
+                    screenShotView.setToolFlag(AnnotationView.RECT_TOOL);
+                } else {
+                    screenShotView.setToolFlag(AnnotationView.OVAL_TOOL);
+                }
+            } else {
+                screenShotView.setToolFlag(AnnotationView.TEXT_TOOL);
+            }
         }
     }
 
 
-
-    public void tapColor1 (View view) {
+    public void tapColor1(View view) {
         //set color of FABs
         previousColor = currentColor;
         selectedColor = fab1Color;
@@ -480,10 +489,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         selectColor(view);
         fab1Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(selectedColor);
+        screenShotView.setColor(selectedColor);
     }
 
-    public void tapColor2 (View view) {
+    public void tapColor2(View view) {
         //set color of FABs
         previousColor = currentColor;
         selectedColor = fab2Color;
@@ -491,10 +500,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         selectColor(view);
         fab2Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(selectedColor);
+        screenShotView.setColor(selectedColor);
     }
 
-    public void tapColor3 (View view) {
+    public void tapColor3(View view) {
         //set color of FABs
         previousColor = currentColor;
         selectedColor = fab3Color;
@@ -502,30 +511,30 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         selectColor(view);
         fab3Color = previousColor;
         //set color of actual tool
-        screenShotView.setSelectedPaint(selectedColor);
+        screenShotView.setColor(selectedColor);
     }
 
     public void selectColor(final View view) {
         //implement later -- use four colors - don't display active color in color options
 
         ObjectAnimator animator = ObjectAnimator.ofInt(fabCurrentTool,
-                                                      "backgroundTint",
-                                                       currentColor,
-                                                       selectedColor);
+                "backgroundTint",
+                currentColor,
+                selectedColor);
         animator.setDuration(2000L);
         animator.setEvaluator(new ArgbEvaluator());
         animator.setInterpolator(new DecelerateInterpolator(2));
         animator.addUpdateListener(new ObjectAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                int[][] states = new int[][] {
-                        new int[] { android.R.attr.state_enabled}, // enabled
-                        new int[] {-android.R.attr.state_enabled}, // disabled
-                        new int[] {-android.R.attr.state_checked}, // unchecked
-                        new int[] { android.R.attr.state_pressed}  // pressed
+                int[][] states = new int[][]{
+                        new int[]{android.R.attr.state_enabled}, // enabled
+                        new int[]{-android.R.attr.state_enabled}, // disabled
+                        new int[]{-android.R.attr.state_checked}, // unchecked
+                        new int[]{android.R.attr.state_pressed}  // pressed
                 };
 
-                int[] colors = new int[] {
+                int[] colors = new int[]{
                         red,
                         green,
                         black,
@@ -566,7 +575,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         float rotation;
         if (hasFocus) //keyboard is opening, spin
-            rotation = 360 - fabCurrentTool.getRotation() ;
+            rotation = 360 - fabCurrentTool.getRotation();
         else //keyboard closing, un-rotate
             rotation = -fabCurrentTool.getRotation();
 
@@ -608,9 +617,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         });
         if (!hasFocus) {
             if (isDrawSaved) {
-                isShapesSelected = false;
-                isTextSelected = false;
-                isDrawSelected = true;
+                screenShotView.setToolFlag(AnnotationView.DRAW_TOOL);
             }
             if (isShapeSaved) {
                 isDrawSelected = false;
@@ -623,6 +630,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public class OptionMenuTouchListener implements View.OnTouchListener {
         boolean doNothing = false;
+
         @SuppressLint("ClickableViewAccessibility")
         @Override
         public boolean onTouch(final View v, MotionEvent event) {
@@ -696,7 +704,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
     public class ImageViewTouchWithDraw extends android.support.v7.widget.AppCompatImageView {
 
-        private Bitmap  mBitmap;
+        private Bitmap mBitmap;
         private Canvas mCanvas;
         private Path mPath;
         private int firstPointerIndex = -1;
@@ -730,7 +738,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             static final int IS_ADJUST = 16;
             static final int IS_TEXT_CHANGE = 20;
 
-            DrawAction(Path path, Paint paint, RectF rectF, int flag){
+            DrawAction(Path path, Paint paint, RectF rectF, int flag) {
                 this.path = path;
                 this.paint = paint;
                 this.rectF = rectF;
@@ -763,7 +771,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 }
 
                 if (isLine) {
-                    for (PointF p : points ) {
+                    for (PointF p : points) {
                         p.set(p.x += offsetX, p.y += offsetY);
                     }
                     path.offset(offsetX, offsetY);
@@ -793,9 +801,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 if (isRect) { //isText
                     if (this.rectF.contains(x, y)) contains = true;
                 } else if (isOval) {
-                    if (pointInOval(x,y)) contains = true;
+                    if (pointInOval(x, y)) contains = true;
                 } else if (isLine) {
-                    if (pointInLine(x,y)) contains = true;
+                    if (pointInLine(x, y)) contains = true;
                 }
 
                 return contains;
@@ -804,15 +812,15 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             boolean pointInOval(float x, float y) {
                 float dx = x - rectF.centerX();
                 float dy = y - rectF.centerY();
-                float width = rectF.width()/2;
-                float height = rectF.height()/2;
+                float width = rectF.width() / 2;
+                float height = rectF.height() / 2;
                 return (dx * dx) / (width * width) + (dy * dy) / (height * height) <= 1;
             }
 
             boolean pointInLine(float x, float y) {
                 boolean inside = false;
-                RectF bounds = new RectF(x - 65,y - 65,x + 65,y + 65);
-                for (PointF p : points ) {
+                RectF bounds = new RectF(x - 65, y - 65, x + 65, y + 65);
+                for (PointF p : points) {
                     if (bounds.contains(p.x, p.y)) {
                         inside = true;
                     }
@@ -820,13 +828,33 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 return inside;
             }
 
-            boolean isRect() {return this.isRect;}
-            boolean isOval() {return this.isOval;}
-            boolean isLine() {return this.isLine;}
-            boolean isText() {return this.isText;}
-            boolean isDelete() {return this.isDelete;}
-            boolean isAdjust() {return this.isAdjust;}
-            boolean isTextChange() {return this.isTextChange;}
+            boolean isRect() {
+                return this.isRect;
+            }
+
+            boolean isOval() {
+                return this.isOval;
+            }
+
+            boolean isLine() {
+                return this.isLine;
+            }
+
+            boolean isText() {
+                return this.isText;
+            }
+
+            boolean isDelete() {
+                return this.isDelete;
+            }
+
+            boolean isAdjust() {
+                return this.isAdjust;
+            }
+
+            boolean isTextChange() {
+                return this.isTextChange;
+            }
 
             int getEditFlag() {
                 int flag = 0;
@@ -883,7 +911,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             super(c, attrs);
             mPath = new Path();
             setSelectedPaint(green);
-            mScaleGestureDetector = new ScaleGestureDetector(getApplicationContext(), new ScaleListener());
+            mScaleGestureDetector = new ScaleGestureDetector(getApplicationContext(),
+                    new ScaleListener());
         }
 
         @Override
@@ -891,9 +920,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             super.onSizeChanged(w, h, oldw, oldh);
             if (mBitmap == null) {
                 mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-            }
-            else {
-                mBitmap = Bitmap.createScaledBitmap(mBitmap, w, h,true);
+            } else {
+                mBitmap = Bitmap.createScaledBitmap(mBitmap, w, h, true);
             }
             mCanvas = new Canvas(mBitmap);
         }
@@ -946,9 +974,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 } else if (latestAction.isAdjust()) { // undo adjust
 
                     // Temp holders for edited state
-                    Path tempPath =  new Path(drawAction.path);
+                    Path tempPath = new Path(drawAction.path);
                     Paint tempPaint = new Paint(drawAction.paint);
-                    RectF tempRectF = new RectF (drawAction.rectF);
+                    RectF tempRectF = new RectF(drawAction.rectF);
                     ArrayList<PointF> tempPoints = new ArrayList<>();
 
                     if (drawAction.isLine()) {
@@ -976,7 +1004,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                     // Return drawing to previous state
                     drawAction.path = new Path(latestAction.path);
-                    drawAction.paint = new Paint (latestAction.paint);
+                    drawAction.paint = new Paint(latestAction.paint);
                     drawAction.rectF = new RectF(latestAction.rectF);
                     drawAction.points = new ArrayList<>(latestAction.points);
 
@@ -1012,9 +1040,9 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                 } else if (latestUndo.isAdjust()) { // Redo adjust
 
-                    Path tempPath =  new Path(drawAction.path);
+                    Path tempPath = new Path(drawAction.path);
                     Paint tempPaint = new Paint(drawAction.paint);
-                    RectF tempRectF = new RectF (drawAction.rectF);
+                    RectF tempRectF = new RectF(drawAction.rectF);
                     ArrayList<PointF> tempPoints = new ArrayList<>();
                     for (PointF p : drawAction.points) {
                         if (p != null) {
@@ -1023,8 +1051,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     }
 
                     // Reset drawing to adjusted state
-                    drawAction.path =  new Path(latestUndo.path);
-                    drawAction.paint = new Paint (latestUndo.paint);
+                    drawAction.path = new Path(latestUndo.path);
+                    drawAction.paint = new Paint(latestUndo.paint);
                     drawAction.rectF = new RectF(latestUndo.rectF);
                     drawAction.points = new ArrayList<>(latestUndo.points);
 
@@ -1044,7 +1072,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
 
 
-
         private float mX, mY;
         private static final float TOUCH_TOLERANCE = 4;
         private boolean dontMove = false;
@@ -1058,189 +1085,189 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             return super.performClick();
         }
 
-        @Override
-        public boolean onTouchEvent(MotionEvent event) {
-
-            final float x = event.getX();
-            final float y = event.getY();
-            int index = event.getActionIndex();
-            int currentPointerId = event.getPointerId(index);
-            currentView = getCurrentFocus();
-            final int action = event.getAction();
-            mScaleGestureDetector.onTouchEvent(event);
-
-            switch (action & MotionEvent.ACTION_MASK) {
-
-                case MotionEvent.ACTION_DOWN:
-                    //accessibility requirement
-                    performClick();
-
-                    fabCurrentTool.hide();
-
-                    //old stuff -- subject to removal
-                    if (isDrawSelected) {
-                        if (dontMove) {
-                            mPath.reset();
-                            mPath.moveTo(x, y);
-                            mX = x;
-                            mY = y;
-                            dontMove = false;
-                            deselectView(currentView);
-                            invalidate();
-                            break;
-                        }
-                    }
-
-                    mX = x;
-                    mY = y;
-
-                    // check if we've touched inside some drawing
-//                    if (isTextSelected && (currentView instanceof EditText)) {
-//                        // If in an ET already, clear focus. Else, make a new one.
-//                        currentView.clearFocus();
-//                    } else {}
-
-                    touchedDrawing = getTouchedDrawing(x, y);
-
-
-                    if (!isNewLine && !(currentView instanceof EditText)) {
-                        fabDelete.show();
-                    }
-
-                    invalidate();
-                    firstPointerIndex = event.getActionIndex();
-                    firstPointerID = event.getPointerId(firstPointerIndex);
-                    break;
-
-                case MotionEvent.ACTION_MOVE:
-                    if (touchedDrawing == null) break;
-
-                    if (currentPointerId == firstPointerID) {
-
-                        // if we are drawing a line, rather than moving an existing drawing
-                        if (isNewLine) {
-                            if (dontMove) {
-                                break;
-                            }
-
-                            float dx = Math.abs(x - mX);
-                            float dy = Math.abs(y - mY);
-
-                            if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
-                                PointF p = new PointF(x, y);
-                                touchedDrawing.points.add(p);
-                                touchedDrawing.drawTo(x, y, mX, mY);
-                                mX = x;
-                                mY = y;
-                            }
-                        } else { // if it's an existing drawing
-
-                            touchedDrawing.offsetDrawing(x - mX,y - mY);
-
-                            trashcanRect = Utils.getViewRect(fabLayoutDelete);
-
-                            if (trashcanRect != null) {
-                                if (trashcanRect.contains((int) event.getRawX(), (int) event.getRawY())) {
-                                    if (!isDrawingInTrash) {
-                                        fabDelete.setScaleX(1.3f);
-                                        fabDelete.setScaleY(1.3f);
-                                        isDrawingInTrash = true;
-                                    }
-                                } else {
-                                    if (isDrawingInTrash) {
-
-                                        fabDelete.setScaleX(1);
-                                        fabDelete.setScaleY(1);
-                                        isDrawingInTrash = false;
-                                    }
-                                }
-                            }
-
-                            mX = x;
-                            mY = y;
-
-                        }
-                    }
-
-                    invalidate();
-                    break;
-
-                case MotionEvent.ACTION_UP:
-                    fabCurrentTool.show();
-                    fabDelete.hide();
-
-                    if (touchedDrawing != null) {
-                        if (isDrawingInTrash) { // flag drawing for deletion and save action
-
-                            // Revert adjustments when deleting
-                            touchedDrawing.path = editAction.path;
-                            touchedDrawing.rectF = editAction.rectF;
-                            touchedDrawing.paint = editAction.paint;
-                            touchedDrawing.points = editAction.points;
-
-                            // Mark the drawing to be deleted so that it's ignored in onDraw()
-                            touchedDrawing.deleted = true;
-
-                            // Designate that new action is delete
-                            editAction.setEdit(DrawAction.IS_DELETE);
-
-                            // For ease of use in undo/redo
-                            editAction.editedAction = touchedDrawing;
-
-                            // Add the delete action to the list of done actions
-                            actionsList.add(editAction);
-
-
-                        } else if (!isNewDrawing) { // save adjust action
-
-                            // Designate that new action is adjustment
-                            editAction.setEdit(DrawAction.IS_ADJUST);
-
-                            // Save the edited object in the adjust action
-                            editAction.editedAction = touchedDrawing;
-
-                            // Add the adjust action to the list of done actions
-                            actionsList.add(editAction);
-
-                            // If any action is taken, clear redo list
-                            redoList.clear();
-
-                        }
-
-                        isNewDrawing = false;
-                        isDrawingInTrash = false;
-                    }
-
-                    editAction = null;
-
-                    invalidate();
-                    break;
-
-                case MotionEvent.ACTION_POINTER_UP:
-
-                    if (touchedDrawing != null && touchedDrawing.isLine()) {
-                        if (dontMove) {
-                            break;
-                        }
-
-                        fabCurrentTool.show();
-                        fabDelete.hide();
-                        firstPointerID = -1;
-                    }
-                    invalidate();
-                    break;
-
-            }
-
-            return true;
-        }
+//        @Override
+//        public boolean onTouchEvent(MotionEvent event) {
+//
+//            final float x = event.getX();
+//            final float y = event.getY();
+//            int index = event.getActionIndex();
+//            int currentPointerId = event.getPointerId(index);
+//            currentView = getCurrentFocus();
+//            final int action = event.getAction();
+//            mScaleGestureDetector.onTouchEvent(event);
+//
+//            switch (action & MotionEvent.ACTION_MASK) {
+//
+//                case MotionEvent.ACTION_DOWN:
+//                    //accessibility requirement
+//                    performClick();
+//
+//                    fabCurrentTool.hide();
+//
+//                    //old stuff -- subject to removal
+//                    if (isDrawSelected) {
+//                        if (dontMove) {
+//                            mPath.reset();
+//                            mPath.moveTo(x, y);
+//                            mX = x;
+//                            mY = y;
+//                            dontMove = false;
+//                            deselectView(currentView);
+//                            invalidate();
+//                            break;
+//                        }
+//                    }
+//
+//                    mX = x;
+//                    mY = y;
+//
+//                    // check if we've touched inside some drawing
+////                    if (isTextSelected && (currentView instanceof EditText)) {
+////                        // If in an ET already, clear focus. Else, make a new one.
+////                        currentView.clearFocus();
+////                    } else {}
+//
+//                    touchedDrawing = getTouchedDrawing(x, y);
+//
+//
+//                    if (!isNewLine && !(currentView instanceof EditText)) {
+//                        fabDelete.show();
+//                    }
+//
+//                    invalidate();
+//                    firstPointerIndex = event.getActionIndex();
+//                    firstPointerID = event.getPointerId(firstPointerIndex);
+//                    break;
+//
+//                case MotionEvent.ACTION_MOVE:
+//                    if (touchedDrawing == null) break;
+//
+//                    if (currentPointerId == firstPointerID) {
+//
+//                        // if we are drawing a line, rather than moving an existing drawing
+//                        if (isNewLine) {
+//                            if (dontMove) {
+//                                break;
+//                            }
+//
+//                            float dx = Math.abs(x - mX);
+//                            float dy = Math.abs(y - mY);
+//
+//                            if (dx >= TOUCH_TOLERANCE || dy >= TOUCH_TOLERANCE) {
+//                                PointF p = new PointF(x, y);
+//                                touchedDrawing.points.add(p);
+//                                touchedDrawing.drawTo(x, y, mX, mY);
+//                                mX = x;
+//                                mY = y;
+//                            }
+//                        } else { // if it's an existing drawing
+//
+//                            touchedDrawing.offsetDrawing(x - mX, y - mY);
+//
+//                            trashcanRect = Utils.getViewRect(fabLayoutDelete);
+//
+//                            if (trashcanRect != null) {
+//                                if (trashcanRect.contains((int) event.getRawX(), (int) event.getRawY())) {
+//                                    if (!isDrawingInTrash) {
+//                                        fabDelete.setScaleX(1.3f);
+//                                        fabDelete.setScaleY(1.3f);
+//                                        isDrawingInTrash = true;
+//                                    }
+//                                } else {
+//                                    if (isDrawingInTrash) {
+//
+//                                        fabDelete.setScaleX(1);
+//                                        fabDelete.setScaleY(1);
+//                                        isDrawingInTrash = false;
+//                                    }
+//                                }
+//                            }
+//
+//                            mX = x;
+//                            mY = y;
+//
+//                        }
+//                    }
+//
+//                    invalidate();
+//                    break;
+//
+//                case MotionEvent.ACTION_UP:
+//                    fabCurrentTool.show();
+//                    fabDelete.hide();
+//
+//                    if (touchedDrawing != null) {
+//                        if (isDrawingInTrash) { // flag drawing for deletion and save action
+//
+//                            // Revert adjustments when deleting
+//                            touchedDrawing.path = editAction.path;
+//                            touchedDrawing.rectF = editAction.rectF;
+//                            touchedDrawing.paint = editAction.paint;
+//                            touchedDrawing.points = editAction.points;
+//
+//                            // Mark the drawing to be deleted so that it's ignored in onDraw()
+//                            touchedDrawing.deleted = true;
+//
+//                            // Designate that new action is delete
+//                            editAction.setEdit(DrawAction.IS_DELETE);
+//
+//                            // For ease of use in undo/redo
+//                            editAction.editedAction = touchedDrawing;
+//
+//                            // Add the delete action to the list of done actions
+//                            actionsList.add(editAction);
+//
+//
+//                        } else if (!isNewDrawing) { // save adjust action
+//
+//                            // Designate that new action is adjustment
+//                            editAction.setEdit(DrawAction.IS_ADJUST);
+//
+//                            // Save the edited object in the adjust action
+//                            editAction.editedAction = touchedDrawing;
+//
+//                            // Add the adjust action to the list of done actions
+//                            actionsList.add(editAction);
+//
+//                            // If any action is taken, clear redo list
+//                            redoList.clear();
+//
+//                        }
+//
+//                        isNewDrawing = false;
+//                        isDrawingInTrash = false;
+//                    }
+//
+//                    editAction = null;
+//
+//                    invalidate();
+//                    break;
+//
+//                case MotionEvent.ACTION_POINTER_UP:
+//
+//                    if (touchedDrawing != null && touchedDrawing.isLine()) {
+//                        if (dontMove) {
+//                            break;
+//                        }
+//
+//                        fabCurrentTool.show();
+//                        fabDelete.hide();
+//                        firstPointerID = -1;
+//                    }
+//                    invalidate();
+//                    break;
+//
+//            }
+//
+//            return true;
+//        }
 
         private DrawAction getTouchedDrawing(final float xTouch, final float yTouch) {
 
             DrawAction touched = null;
 
             for (DrawAction drawAction : actionsList) {
-                if (!drawAction.isEdit() && drawAction.contains(xTouch,yTouch)) {
+                if (!drawAction.isEdit() && drawAction.contains(xTouch, yTouch)) {
 
                     touched = drawAction;
 
@@ -1267,7 +1294,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                 }
             }
 
-            if ( (null == touched) ) {
+            if ((null == touched)) {
                 if (actionsList.size() < 50) {
 
                     isNewDrawing = true;
@@ -1291,13 +1318,12 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                         isNewLine = true;
                     } else if (isShapesSelected) {
                         shapeFlag = (shapeIconID == squareIconID) ? DrawAction.IS_RECT : DrawAction.IS_OVAL;
-                    }
-                    else if (isTextSelected) {
+                    } else if (isTextSelected) {
                         shapeFlag = DrawAction.IS_TEXT;
                         placeEditText(editText, (int) rectF.centerX(), (int) rectF.centerY());
                         setupEditText(editText, selectedPaint, null);
 //                        textBitmap = editText.getDrawingCache();
-                        Rect r =  new Rect();
+                        Rect r = new Rect();
                         editText.getDrawingRect(r);
                         rectF.set(r);
                     }
@@ -1339,12 +1365,11 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
 
             @Override
-            public boolean onScale(ScaleGestureDetector detector){
+            public boolean onScale(ScaleGestureDetector detector) {
 
                 if (touchedDrawing != null && !touchedDrawing.isLine()) {
                     currentSpanX = detector.getCurrentSpanX();
                     currentSpanY = detector.getCurrentSpanY();
-
 
                     float spanXDiff = currentSpanX - lastSpanX;
                     float spanYDiff = currentSpanY - lastSpanY;
@@ -1363,16 +1388,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     if ((!scalingUpX && (lastRectF.width() >= shapeMinSize)) ||
                             (scalingUpX && (lastRectF.width() <= shapeMaxWidth))) {
 
-                        if ((currentRectF.width() + spanXDiff/2) > shapeMaxWidth) {
-                            currentRectF.left = currentRectF.centerX() - shapeMaxWidth/2;
-                            currentRectF.right = currentRectF.centerX() + shapeMaxWidth/2;
+                        if ((currentRectF.width() + spanXDiff / 2) > shapeMaxWidth) {
+                            currentRectF.left = currentRectF.centerX() - shapeMaxWidth / 2;
+                            currentRectF.right = currentRectF.centerX() + shapeMaxWidth / 2;
 
-                        } else if ((currentRectF.width() + spanXDiff/2) < shapeMinSize) {
-                            currentRectF.left = currentRectF.centerX() - shapeMinSize/2;
-                            currentRectF.right = currentRectF.centerX() + shapeMinSize/2;
+                        } else if ((currentRectF.width() + spanXDiff / 2) < shapeMinSize) {
+                            currentRectF.left = currentRectF.centerX() - shapeMinSize / 2;
+                            currentRectF.right = currentRectF.centerX() + shapeMinSize / 2;
                         } else {
-                            currentRectF.right += (spanXDiff/2);
-                            currentRectF.left -= (spanXDiff/2);
+                            currentRectF.right += (spanXDiff / 2);
+                            currentRectF.left -= (spanXDiff / 2);
                         }
 
 
@@ -1381,16 +1406,16 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     if ((!scalingUpY && (lastRectF.height() >= shapeMinSize)) ||
                             (scalingUpY && (lastRectF.height() <= shapeMaxHeight))) {
 
-                        if ((currentRectF.height() + spanYDiff/2) > shapeMaxHeight) {
-                            currentRectF.top = currentRectF.centerY() - shapeMaxHeight/2;
-                            currentRectF.bottom = currentRectF.centerY() + shapeMaxHeight/2;
+                        if ((currentRectF.height() + spanYDiff / 2) > shapeMaxHeight) {
+                            currentRectF.top = currentRectF.centerY() - shapeMaxHeight / 2;
+                            currentRectF.bottom = currentRectF.centerY() + shapeMaxHeight / 2;
 
-                        } else if ((currentRectF.height() + spanYDiff/2) < shapeMinSize) {
-                            currentRectF.top = currentRectF.centerY() - shapeMinSize/2;
-                            currentRectF.bottom = currentRectF.centerY() + shapeMinSize/2;
+                        } else if ((currentRectF.height() + spanYDiff / 2) < shapeMinSize) {
+                            currentRectF.top = currentRectF.centerY() - shapeMinSize / 2;
+                            currentRectF.bottom = currentRectF.centerY() + shapeMinSize / 2;
                         } else {
-                            currentRectF.top -= (spanYDiff/2);
-                            currentRectF.bottom += (spanYDiff/2);
+                            currentRectF.top -= (spanYDiff / 2);
+                            currentRectF.bottom += (spanYDiff / 2);
                         }
 
 
@@ -1519,7 +1544,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                                 return true;
                             }
                     }
-
 
 
                     return false;
@@ -1674,28 +1698,10 @@ public class ScreenShotMarkUp extends AppCompatActivity {
         }
 
 
-
-
-
-
-
-
-
-
         // Path Objects
 
 
     }
-
-
-
-    // quadTo()
-
-//    void addToPath(float x, float y) {
-//        PointF prevPoint = points.get(points.size() - 1);
-//        path.quadTo(prevPoint.x, prevPoint.y,
-//                (x + prevPoint.x) / 2, (y + prevPoint.y) / 2);
-//    }
 }
 
 
