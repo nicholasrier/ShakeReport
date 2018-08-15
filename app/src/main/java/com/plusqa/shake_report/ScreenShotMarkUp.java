@@ -11,6 +11,7 @@ import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.content.ContextCompat;
@@ -24,6 +25,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
@@ -95,6 +97,8 @@ public class ScreenShotMarkUp extends AppCompatActivity {
     private int toolIconID3;
 
     int orientation;
+
+    View activityRootView;
 
 //    OptionMenuTouchListener shapeOptionTouchListener;
 
@@ -197,7 +201,23 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         fabBGLayout = findViewById(R.id.fabBGLayout);
 
-        fabDelete.hide();
+        activityRootView = findViewById(R.id.coordinatorLayout01);
+
+        activityRootView.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    boolean doOnce = true;
+            @Override
+            public void onGlobalLayout() {
+                
+                if (doOnce) {
+                    fabDelete.hide();
+                    doOnce = false;
+                }
+
+                screenShotView.setDeleteArea(new RectF(Utils.getViewRect(fabLayoutDelete)) );
+
+            }
+        });
 
         // Listen for shape hovering over delete tool to animate trash can FAB
         screenShotView.setDeletionListener(new AnnotationView.DeletionListener() {
@@ -220,25 +240,25 @@ public class ScreenShotMarkUp extends AppCompatActivity {
             }
         });
 
-
         // Listen to when user is editing screenshot, so that UI can be hidden/shown appropriately
         screenShotView.setOnAnnotationListener(new AnnotationView.OnAnnotationListener() {
             @Override
-            public void onAnnotation(int toolFlag, boolean annotating) {
+            public void onAnnotation(int toolFlag, boolean annotating, boolean isNewDrawing) {
                 if (annotating) {
 
                     fabCurrentTool.hide();
 
-                    if (toolFlag != AnnotationView.DRAW_TOOL) {
+                    if (toolFlag == AnnotationView.DRAW_TOOL && isNewDrawing) {
+
+                        fabDelete.hide();
+                    } else {
 
                         fabDelete.show();
                     }
-
                 } else {
 
                     fabCurrentTool.show();
                     fabDelete.hide();
-
                 }
             }
         });

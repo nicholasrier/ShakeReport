@@ -116,8 +116,6 @@ public abstract class Drawing extends Path{
 
     }
 
-
-
     public void redoAdjust() {
 
         if (!undoneAdjustments.isEmpty()) {

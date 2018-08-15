@@ -6,7 +6,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.support.design.widget.FloatingActionButton;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.inputmethod.InputMethodManager;
@@ -17,11 +16,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     private Paint selectedPaint;
 
-    private TrashCan trashCan;
-
-    private RectF trashCanRect;
-
-    private FloatingActionButton trashCanFAB;
+    private RectF deleteArea;
 
     private Canvas mCanvas;
 
@@ -61,9 +56,6 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     // Scales drawings
     private ScaleGestureDetector mScaleGestureDetector;
 
-    // Should create the trashcan layout and fab programmatically to include with this
-    // ... maybe the tools menu as well
-
     public AnnotationView(Context context) {
         super(context);
 
@@ -78,7 +70,12 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     }
 
-//    public void init(int color, )
+    public void setDeleteArea(RectF deleteArea) {
+
+        if (deleteArea != null) {
+            this.deleteArea = deleteArea;
+        }
+    }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
@@ -153,8 +150,6 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 }
 
-                setAnnotating(true);
-
                 prevX = x;
                 prevY = y;
 
@@ -169,6 +164,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                     touchedDrawing.moveTo(x, y);
                 }
+
+                setAnnotating(true);
 
                 invalidate();
 
@@ -192,8 +189,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                     // As long as we're not drawing a line - drags drawings
                     touchedDrawing.offsetDrawing(x - prevX, y - prevY);
 
+                    float rX = event.getRawX();
+                    float rY = event.getRawY();
+
                     // Detect if drawing is in delete area
-                    if (trashCanRect.contains(x, y)) { // Gotta set up this RectF
+                    if (deleteArea.contains(rX, rY)) {
 
                         setDeleteFlag(true);
                     } else {
@@ -220,6 +220,25 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 // To be added to doneActions
                 Action action;
 
+                if (isNewDrawing) {
+
+                    action = new MakeDrawing(touchedDrawing);
+
+                    if (deleteFlag) {
+
+                        doneActions.add(action);
+
+                    }
+                    // Else, a drawing was adjusted - record an adjust action
+                } else {
+
+                    // Drawings keep track of adjustments in private list
+                    touchedDrawing.saveAdjustment();
+
+                    action = new AdjustDrawing(touchedDrawing);
+
+                }
+
                 // If drawing is in delete area, delete and record a delete action
                 if (deleteFlag) {
 
@@ -227,22 +246,6 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                     action = new DeleteDrawing(touchedDrawing);
 
-                } else {
-
-                    // If drawing is new, record a make action
-                    if (isNewDrawing) {
-
-                        action = new MakeDrawing(touchedDrawing);
-
-                    // Else, a drawing was adjusted - record an adjust action
-                    } else {
-
-                        // Drawings keep track of adjustments in private list
-                        touchedDrawing.saveAdjustment();
-
-                        action = new AdjustDrawing(touchedDrawing);
-
-                    }
                 }
 
                 // Record this completed action
@@ -638,14 +641,17 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     public void setAnnotating(boolean a) {
         if (a != annotating) {
+
             annotating = a;
+
             annotationToggled();
+
         }
     }
 
     public interface OnAnnotationListener {
 
-        void onAnnotation(int toolFlag, boolean annotating);
+        void onAnnotation(int toolFlag, boolean annotating, boolean isNewDrawing);
 
     }
 
@@ -658,8 +664,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     private void annotationToggled() {
 
-        if (onAnnotationListener != null)
-            onAnnotationListener.onAnnotation(toolFlag, annotating);
+        if (onAnnotationListener != null) {
+
+            onAnnotationListener.onAnnotation(toolFlag, annotating, isNewDrawing);
+
+        }
 
     }
 
