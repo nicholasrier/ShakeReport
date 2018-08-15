@@ -7,7 +7,7 @@ public class RectFDrawing extends Drawing {
 
     RectFDrawing(float x, float y, Paint paint) {
 
-        super();
+        super(x, y, paint);
 
         RectF rectF = new RectF(x - 200,
                 y - 200,
@@ -15,8 +15,6 @@ public class RectFDrawing extends Drawing {
                 y + 200);
 
         setRectF(rectF);
-
-        setPaint(paint);
 
         addRect(rectF, Direction.CW);
 

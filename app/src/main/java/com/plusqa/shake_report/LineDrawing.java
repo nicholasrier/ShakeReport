@@ -14,11 +14,9 @@ public class LineDrawing extends Drawing {
     private boolean isScaled = false;
 
     LineDrawing(float x, float y, Paint paint) {
-        super();
+        super(x, y, paint);
 
         pointFs.add(new PointF(x, y));
-
-        setPaint(paint);
 
         reset();
     }

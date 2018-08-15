@@ -34,8 +34,13 @@ public abstract class Drawing extends Path{
         }
     }
 
-    Drawing() {
+    Drawing(float x, float y, Paint paint) {
+
         super();
+
+        this.paint = paint;
+
+        moveTo(x, y);
     }
 
 //  -------- Gets and sets --------
@@ -46,16 +51,6 @@ public abstract class Drawing extends Path{
 
     void setPaint(Paint paint) {
         this.paint = paint;
-    }
-
-    void addToOffsetXY(float offsetX, float offsetY) {
-        this.offsetX += offsetX;
-        this.offsetY += offsetY;
-    }
-
-    void addToScaleXY( float scaleX, float scaleY) {
-        this.scaleX += scaleX;
-        this.scaleY += scaleY;
     }
 
     public Boolean isDeleted() {
@@ -84,7 +79,8 @@ public abstract class Drawing extends Path{
         rectF.offsetTo(rectF.left + offsetX,
                 rectF.top + offsetY);
 
-        addToOffsetXY(offsetX, offsetY);
+        this.offsetX += offsetX;
+        this.offsetY += offsetY;
 
     }
 
@@ -96,7 +92,8 @@ public abstract class Drawing extends Path{
         rectF.bottom += scaleY / 2;
         rectF.top -= scaleY / 2;
 
-        addToScaleXY(scaleX, scaleY);
+        this.scaleX += scaleX;
+        this.scaleY += scaleY;
 
     }
 
@@ -115,13 +112,15 @@ public abstract class Drawing extends Path{
 
         clearAdjustment();
 
+        undoneAdjustments.clear();
+
     }
 
 
 
     public void redoAdjust() {
 
-        if (undoneAdjustments.isEmpty()) {
+        if (!undoneAdjustments.isEmpty()) {
 
             Adjustment la = undoneAdjustments.get(undoneAdjustments.size() - 1);
 
@@ -132,6 +131,8 @@ public abstract class Drawing extends Path{
             offsetDrawing(la.offsetX, la.offsetY);
 
             scaleDrawing(la.scaleX, la.scaleY);
+
+            clearAdjustment();
 
         }
     }
@@ -149,6 +150,8 @@ public abstract class Drawing extends Path{
             offsetDrawing(-la.offsetX, -la.offsetY);
 
             scaleDrawing(-la.scaleX, -la.scaleY);
+
+            clearAdjustment();
 
         }
     }

@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.support.design.widget.FloatingActionButton;
 import android.view.MotionEvent;
@@ -20,7 +19,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     private TrashCan trashCan;
 
-    private Rect trashCanRect;
+    private RectF trashCanRect;
 
     private FloatingActionButton trashCanFAB;
 
@@ -56,7 +55,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     // Previous touch coordinates
     private float prevX, prevY;
 
-    private boolean isDrawingInTrash = false;
+    private boolean deleteFlag = false;
+    private boolean wasDrawingInTrash = false;
 
     // Scales drawings
     private ScaleGestureDetector mScaleGestureDetector;
@@ -67,33 +67,45 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     public AnnotationView(Context context) {
         super(context);
 
-        initPaint();
+        // Default color
+        setPaint(Color.parseColor("#51ccc0"));
+
+        // Default tool
+        toolFlag = DRAW_TOOL;
 
         mScaleGestureDetector = new ScaleGestureDetector(context,
                 new DrawingScaleListener());
 
     }
 
+//    public void init(int color, )
+
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+
         super.onSizeChanged(w, h, oldw, oldh);
-        if (mBitmap == null) {
-            mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        }
-        else {
-            mBitmap = Bitmap.createScaledBitmap(mBitmap, w, h,true);
-        }
+
+        if (mBitmap == null) { mBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888); }
+        else { mBitmap = Bitmap.createScaledBitmap(mBitmap, w, h,true); }
+
         mCanvas = new Canvas(mBitmap);
     }
 
+    // You're not just a QA tester, you're an artist
     @Override
     protected void onDraw(Canvas canvas) {
+
         super.onDraw(canvas);
+
         canvas.drawBitmap(mBitmap, 0, 0, null);
 
+        // Draw all not-deleted drawings
         for (Drawing drawing : drawings) {
-            if (!drawing.isDeleted()) { // "Deleted" drawings are not drawn
+
+            if (!drawing.isDeleted()) {
+
                 canvas.drawPath(drawing, drawing.getPaint());
+
             }
         }
 
@@ -105,14 +117,13 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         return super.performClick();
     }
 
+    private boolean isNewDrawing;
 
-    boolean isNewDrawing;
+    private boolean firstTouch = true;
 
-    boolean firstTouch = true;
+    private int currentPointerId = -1;
 
-    float offsetX, offsetY, scaleX, scaleY;
-
-    int currentPointerId = -1;
+    private boolean annotating = false;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -121,6 +132,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
         final float x = event.getX();
         final float y = event.getY();
+
         final int eventAction = event.getAction();
 
         int index = event.getActionIndex();
@@ -132,52 +144,63 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
             case MotionEvent.ACTION_DOWN:
 
+                // Get Id of first touch event for multitouch handling
                 if (firstTouch) {
 
-                    int firstPointerIndex = event.getActionIndex();
-                    firstPointerID = event.getPointerId(firstPointerIndex);
+                    firstPointerID = currentPointerId;
 
                     firstTouch = false;
 
                 }
 
+                setAnnotating(true);
+
                 prevX = x;
                 prevY = y;
 
+                // Touched drawing will be set to existing drawing if isNewDrawing is false
                 isNewDrawing = isNewDrawing(x, y);
 
+                // Arbitrary limit 50 drawings - should allow value to be modified in init()
                 if (isNewDrawing && drawings.size() < 50) {
 
+                    // If no drawing contains touch coordinates, make a new one
                     makeDrawing(x, y);
+
                     touchedDrawing.moveTo(x, y);
-
-                    if (toolFlag != DRAW_TOOL) {
-//                        trashCanFAB.show();
-                    }
-
                 }
 
                 invalidate();
 
                 break;
 
+            // Handles drawing lines and dragging objects around screen
             case MotionEvent.ACTION_MOVE:
 
+                // Prevents multitouch movement issues
                 if (touchedDrawing == null || currentPointerId != firstPointerID) {
                     break;
                 }
 
+                // Creating a line - can't offset until line is drawn
                 if (isNewDrawing && toolFlag == DRAW_TOOL) {
 
                         touchedDrawing.quadTo(prevX, prevY, x, y);
 
                 } else {
 
+                    // As long as we're not drawing a line - drags drawings
                     touchedDrawing.offsetDrawing(x - prevX, y - prevY);
 
-                    touchedDrawing.addToOffsetXY(offsetX, offsetY);
+                    // Detect if drawing is in delete area
+                    if (trashCanRect.contains(x, y)) { // Gotta set up this RectF
 
-//                    trashCanHover((int) event.getRawX(), (int) event.getRawY());
+                        setDeleteFlag(true);
+                    } else {
+
+                        setDeleteFlag(false);
+                    }
+
                 }
 
                 prevX = x;
@@ -187,15 +210,18 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 break;
 
+            // Records what action was taken
             case MotionEvent.ACTION_UP:
-
-                Action action;
 
                 if (touchedDrawing == null) {
                     break;
                 }
 
-                if (isDrawingInTrash) {
+                // To be added to doneActions
+                Action action;
+
+                // If drawing is in delete area, delete and record a delete action
+                if (deleteFlag) {
 
                     touchedDrawing.delete();
 
@@ -203,12 +229,15 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 } else {
 
+                    // If drawing is new, record a make action
                     if (isNewDrawing) {
 
                         action = new MakeDrawing(touchedDrawing);
 
+                    // Else, a drawing was adjusted - record an adjust action
                     } else {
 
+                        // Drawings keep track of adjustments in private list
                         touchedDrawing.saveAdjustment();
 
                         action = new AdjustDrawing(touchedDrawing);
@@ -216,24 +245,25 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                     }
                 }
 
+                // Record this completed action
                 doneActions.add(action);
+
+                // Clear undone actions after completing a new action
                 undoneActions.clear();
 
+                // Clear flags
                 isNewDrawing = false;
-                isDrawingInTrash = false;
+                deleteFlag = false;
+
+                setAnnotating(false);
 
                 invalidate();
 
                 break;
 
-            case MotionEvent.ACTION_POINTER_UP:
-
-//                trashCanFAB.hide();
-
-
-                break;
-
+            // Prevents multitouch movement issues
             case MotionEvent.ACTION_POINTER_DOWN:
+
                 if (currentPointerId == firstPointerID) {
                     firstPointerID = -1;
                 }
@@ -241,6 +271,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         }
 
         firstTouch = true;
+
         return true;
     }
 
@@ -292,34 +323,13 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     }
 
-    private void trashCanHover(int x, int y) {
-        if (trashCanRect != null) {
-            if (trashCanRect.contains(x, y)) {
-                if (!isDrawingInTrash) {
-
-                    trashCanFAB.setScaleX(1.3f);
-                    trashCanFAB.setScaleY(1.3f);
-
-                    isDrawingInTrash = true;
-                }
-            } else {
-                if (isDrawingInTrash) {
-
-                    trashCanFAB.setScaleX(1);
-                    trashCanFAB.setScaleY(1);
-
-                    isDrawingInTrash = false;
-                }
-            }
-        }
-    }
-
-    private void initPaint() {
+    // Sets color to draw with
+    public void setPaint(int color) {
 
         selectedPaint = new Paint();
         selectedPaint.setAntiAlias(true);
         selectedPaint.setDither(true);
-        selectedPaint.setColor(Color.parseColor("#51ccc0"));
+        selectedPaint.setColor(color);
         selectedPaint.setStyle(Paint.Style.STROKE);
         selectedPaint.setStrokeJoin(Paint.Join.ROUND);
         selectedPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -327,10 +337,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     }
 
-    public void setColor(int color) {
-        selectedPaint.setColor(color);
-    }
-
+    // Sets the tool (Line, Rect, Oval, Text)
     public void setToolFlag(int toolFlag) {
 
         if (toolFlag == DRAW_TOOL || toolFlag == RECT_TOOL ||
@@ -345,6 +352,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         }
     }
 
+    // Undoes any drawing actions taken by user
     public void undo() {
 
         if (doneActions.size() > 0) {
@@ -366,12 +374,13 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         }
     }
 
+    // Redoes any drawing actions taken by user
     public void redo() {
 
         if (undoneActions.size() > 0) {
 
             // Get the latest undone action
-            Action latestUndoneAction = undoneActions.get(doneActions.size() - 1);
+            Action latestUndoneAction = undoneActions.get(undoneActions.size() - 1);
 
             // Redo the action
             latestUndoneAction.doAction();
@@ -387,7 +396,14 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         }
     }
 
-    // ACTIONS
+    // ACTIONS - specific actions that can be taken by user
+
+    private interface Action {
+
+        void undoAction();
+
+        void doAction();
+    }
 
     private class MakeDrawing implements Action {
 
@@ -453,25 +469,33 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     }
 
 
+    // Allows for scaling of any drawing
     private class DrawingScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
         private float lastSpanX;
         private float lastSpanY;
-        private RectF lastRectF;
+
         float currentSpanX;
         float currentSpanY;
-        final float shapeMinSize = 100;
+
         float shapeMaxHeight;
         float shapeMaxWidth;
-        float canvasHeight;
-        float canvasWidth;
+
+        private RectF lastRectF;
+
+        // Arbitrary minimum size
+        final float shapeMinSize = 100;
 
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
 
+            // Only start scaling if there is a drawing 'selected'
             if (touchedDrawing != null && currentPointerId == firstPointerID) {
+
+                // Get initial values
                 lastSpanX = detector.getCurrentSpanX();
                 lastSpanY = detector.getCurrentSpanY();
+
                 lastRectF = new RectF(touchedDrawing.getRectF());
 
                 return true;
@@ -481,7 +505,6 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 return false;
 
             }
-
         }
 
         @Override
@@ -489,37 +512,46 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
             if (touchedDrawing != null) {
 
+                // Get horizontal and vertical scaling from gesture
                 currentSpanX = detector.getCurrentSpanX();
                 currentSpanY = detector.getCurrentSpanY();
 
+                // Amount to offset size of bounding RectF by
                 float spanXDiff = currentSpanX - lastSpanX;
                 float spanYDiff = currentSpanY - lastSpanY;
 
+                // Find out if scaling up or down for each direction
                 boolean scalingUpX = spanXDiff > 0;
                 boolean scalingUpY = spanYDiff > 0;
 
-                canvasHeight = mCanvas.getHeight();
-                canvasWidth = mCanvas.getWidth();
+                // Upper bounds of possible drawing size
+                shapeMaxWidth = mCanvas.getWidth();
+                shapeMaxHeight = mCanvas.getHeight();
 
-                shapeMaxWidth = canvasWidth;
-                shapeMaxHeight = canvasHeight;
-
+                // Values to be set and used with drawing.scaleDrawing(float scaleX, float scaleY)
                 float scaleX = 0;
                 float scaleY = 0;
 
+                // Scaling is ultimately based on this bounding rect for any drawing
                 RectF currentRectF = touchedDrawing.getRectF();
 
+                // HORIZONTAL SCALING
+                // Don't scale down horizontally if drawing is min width already
                 if ((!scalingUpX && (lastRectF.width() >= shapeMinSize)) ||
+                        // Don't scale up horizontally if drawing is at max width already
                         (scalingUpX && (lastRectF.width() <= shapeMaxWidth))) {
 
+                    // If this gesture would make drawing larger than max width, set to max width
                     if ((currentRectF.width() + spanXDiff / 2) > shapeMaxWidth) {
 
                         scaleX = -(currentRectF.width() - shapeMaxWidth);
 
+                    // If this gesture would make drawing smaller than min width, set to min width
                     } else if ((currentRectF.width() + spanXDiff / 2) < shapeMinSize) {
 
                         scaleX = shapeMinSize - currentRectF.width();
 
+                    // Otherwise, scale according to gesture spanX
                     } else {
 
                         scaleX =  spanXDiff;
@@ -527,17 +559,23 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 }
 
+                // VERTICAL SCALING
+                // Don't scale down vertically if drawing is min width already
                 if ((!scalingUpY && (lastRectF.height() >= shapeMinSize)) ||
+                        // Don't scale up vertically if drawing is at max width already
                         (scalingUpY && (lastRectF.height() <= shapeMaxHeight))) {
 
+                    // If this gesture would make drawing larger than max width, set to max width
                     if ((currentRectF.height() + spanYDiff / 2) > shapeMaxHeight) {
 
                         scaleY = -(currentRectF.height() - shapeMaxHeight);
 
+                    // If this gesture would make drawing smaller than min width, set to min width
                     } else if ((currentRectF.height() + spanYDiff / 2) < shapeMinSize) {
 
                         scaleY = shapeMinSize - currentRectF.height();
 
+                    // Otherwise, scale according to gesture spanX
                     } else {
 
                         scaleY = spanYDiff;
@@ -546,19 +584,82 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 }
 
+                // Track previous values
                 lastSpanY = currentSpanY;
                 lastSpanX = currentSpanX;
-
                 lastRectF = currentRectF;
 
+                // After computing how much to scale by within bounds, scale the current drawing
                 touchedDrawing.scaleDrawing(scaleX, scaleY);
-
-                touchedDrawing.addToScaleXY(scaleX, scaleY);
 
             }
 
             return true;
         }
+
+    }
+
+
+
+    /* Listener to communicate when a drawing has
+       been dragged into or out of the delete area */
+
+    public void setDeleteFlag(boolean df )
+    {
+        if (df != deleteFlag)
+        {
+            deleteFlag = df;
+            deleteFlagToggled();
+        }
+    }
+
+    public interface DeletionListener {
+
+        void onDeleteFlagChange(Boolean deleteFlag);
+    }
+
+    private DeletionListener deletionListener;
+
+    public void setDeletionListener(DeletionListener variableChangeListener) {
+
+        this.deletionListener = variableChangeListener;
+    }
+
+    private void deleteFlagToggled() {
+
+        if (deletionListener != null)
+            deletionListener.onDeleteFlagChange(deleteFlag);
+    }
+
+
+
+    /* Listener to communicate when any annotation
+       is being carried out via touch event */
+
+    public void setAnnotating(boolean a) {
+        if (a != annotating) {
+            annotating = a;
+            annotationToggled();
+        }
+    }
+
+    public interface OnAnnotationListener {
+
+        void onAnnotation(int toolFlag, boolean annotating);
+
+    }
+
+    private OnAnnotationListener onAnnotationListener;
+
+    public void setOnAnnotationListener(OnAnnotationListener onAnnotationListener) {
+
+        this.onAnnotationListener = onAnnotationListener;
+    }
+
+    private void annotationToggled() {
+
+        if (onAnnotationListener != null)
+            onAnnotationListener.onAnnotation(toolFlag, annotating);
 
     }
 

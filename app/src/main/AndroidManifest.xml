@@ -27,7 +27,8 @@
         <activity
             android:name=".ScreenShotMarkUp"
             android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTop" >
+            android:launchMode="singleTop">
+
         </activity>
 
         <activity

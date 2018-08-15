@@ -7,7 +7,7 @@ public class OvalDrawing extends Drawing {
 
     OvalDrawing(float x, float y, Paint paint) {
 
-        super();
+        super(x, y, paint);
 
         RectF rectF = new RectF(x - 200,
                 y - 200,
@@ -15,8 +15,6 @@ public class OvalDrawing extends Drawing {
                 y + 200);
 
         setRectF(rectF);
-
-        setPaint(paint);
 
         addOval(rectF, Direction.CW);
     }
