@@ -197,7 +197,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
         imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
 
-        relativeLayout = findViewById(R.id.ETLayout);
+//        relativeLayout = findViewById(R.id.ETLayout);
 
         fabBGLayout = findViewById(R.id.fabBGLayout);
 
@@ -236,7 +236,6 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     fabDelete.setScaleY(1);
 
                 }
-
             }
         });
 
@@ -255,6 +254,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
 
                         fabDelete.show();
                     }
+
                 } else {
 
                     fabCurrentTool.show();

@@ -6,13 +6,22 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.text.Editable;
+import android.text.InputType;
+import android.util.AttributeSet;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
+import android.view.View;
+import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 
-public class AnnotationView extends android.support.v7.widget.AppCompatEditText {
+public class AnnotationView extends android.support.v7.widget.AppCompatTextView {
 
     private Paint selectedPaint;
 
@@ -28,6 +37,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
     // Designates the tool that is selected
     private int toolFlag;
+
+    String test;
 
     // Tool options
     public static final int DRAW_TOOL = 1;
@@ -47,6 +58,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     // The drawing that is currently being placed / edited
     private Drawing touchedDrawing;
 
+    private TextDrawing touchedText;
+
     // Previous touch coordinates
     private float prevX, prevY;
 
@@ -59,6 +72,31 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
     public AnnotationView(Context context) {
         super(context);
 
+        init(context);
+
+    }
+
+    public AnnotationView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+
+        init(context);
+    }
+
+    public AnnotationView(Context context, AttributeSet attrs) {
+        this(context, attrs, android.R.attr.editTextStyle);
+
+        init(context);
+    }
+
+    public void setDeleteArea(RectF deleteArea) {
+
+        if (deleteArea != null) {
+            this.deleteArea = deleteArea;
+        }
+    }
+
+    private void init(Context context) {
+
         // Default color
         setPaint(Color.parseColor("#51ccc0"));
 
@@ -68,13 +106,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         mScaleGestureDetector = new ScaleGestureDetector(context,
                 new DrawingScaleListener());
 
-    }
+        setBackgroundColor(getResources().getColor(android.R.color.transparent));
+        setDrawingCacheEnabled(true);
+        setFocusable(true);
+        setFocusableInTouchMode(true);
 
-    public void setDeleteArea(RectF deleteArea) {
-
-        if (deleteArea != null) {
-            this.deleteArea = deleteArea;
-        }
     }
 
     @Override
@@ -95,6 +131,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         super.onDraw(canvas);
 
         canvas.drawBitmap(mBitmap, 0, 0, null);
+
+        if ( touchedText != null && touchedText.text.length() > 0) {
+            touchedText.getPaint().setTextSize(40f);
+            canvas.drawText(touchedText.text, touchedText.x, touchedText.y, touchedText.getPaint());
+        }
 
         // Draw all not-deleted drawings
         for (Drawing drawing : drawings) {
@@ -153,7 +194,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 prevX = x;
                 prevY = y;
 
-                // Touched drawing will be set to existing drawing if isNewDrawing is false
+                // Touched drawing will be set if isNewDrawing() returns false
                 isNewDrawing = isNewDrawing(x, y);
 
                 // Arbitrary limit 50 drawings - should allow value to be modified in init()
@@ -168,6 +209,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 setAnnotating(true);
 
                 invalidate();
+
 
                 break;
 
@@ -200,7 +242,6 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                         setDeleteFlag(false);
                     }
-
                 }
 
                 prevX = x;
@@ -218,19 +259,31 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 }
 
                 // To be added to doneActions
-                Action action;
+                Action action = null;
 
+                // If a new drawing was made, always save a make action
                 if (isNewDrawing) {
 
                     action = new MakeDrawing(touchedDrawing);
+
+                    if (toolFlag == TEXT_TOOL) {
+
+                        requestFocus();
+                        imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm == null) return false;
+                        imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT);
+
+                    }
 
                     if (deleteFlag) {
 
                         doneActions.add(action);
 
                     }
-                    // Else, a drawing was adjusted - record an adjust action
-                } else {
+
+                }
+
+                if (!deleteFlag && !isNewDrawing) {
 
                     // Drawings keep track of adjustments in private list
                     touchedDrawing.saveAdjustment();
@@ -239,7 +292,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
 
                 }
 
-                // If drawing is in delete area, delete and record a delete action
+                // If any drawing was deleted, always save a delete action
                 if (deleteFlag) {
 
                     touchedDrawing.delete();
@@ -278,6 +331,16 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
         return true;
     }
 
+    @Override
+    public boolean onKeyUp(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // Do Code here
+        } else {
+            touchedText.text = " " + event.getDisplayLabel();
+        }
+        return super.onKeyUp(keyCode, event);
+    }
+
     // Returns true if placing new drawing
     // If not, returns false and assigns touched drawing
     private boolean isNewDrawing(float x, float y) {
@@ -291,6 +354,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 touchedDrawing = drawing;
 
                 isNew = false;
+
+                break;
 
             }
         }
@@ -320,6 +385,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatEditText 
                 touchedDrawing = new OvalDrawing(x, y, selectedPaint);
 
                 break;
+
+            case TEXT_TOOL:
+
+                touchedText = new TextDrawing(x, y, selectedPaint);
+                touchedDrawing = new TextDrawing(x, y, selectedPaint);
         }
 
         drawings.add(touchedDrawing);

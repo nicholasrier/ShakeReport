@@ -19,7 +19,6 @@
         android:id="@+id/my_toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="?attr/actionBarSize"
         android:elevation="4dp"
         style="@style/AppTheme" >
 
@@ -33,16 +32,16 @@
 
         xmlns:android="http://schemas.android.com/apk/res/android">
 
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+        <!--<RelativeLayout-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:orientation="horizontal">-->
 
-            <RelativeLayout
-                android:id="@+id/ETLayout"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                tools:ignore="UselessParent">
+            <!--<RelativeLayout-->
+                <!--android:id="@+id/ETLayout"-->
+                <!--android:layout_width="match_parent"-->
+                <!--android:layout_height="match_parent"-->
+                <!--tools:ignore="UselessParent">-->
 
                 <LinearLayout
                     android:id="@+id/screenshotLayout"
@@ -50,8 +49,8 @@
                     android:layout_height="match_parent"
                     android:orientation="horizontal"
                     android:adjustViewBounds="true" />
-            </RelativeLayout>
-        </RelativeLayout>
+            <!--</RelativeLayout>-->
+        <!--</RelativeLayout>-->
     </ScrollView>
 
     <include layout="@layout/content_screenshotmarkup" />
