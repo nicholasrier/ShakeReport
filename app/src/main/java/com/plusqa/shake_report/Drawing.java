@@ -7,7 +7,7 @@ import android.graphics.RectF;
 import java.util.ArrayList;
 
 
-public abstract class Drawing extends Path{
+public abstract class Drawing extends Path {
 
     private Paint paint;
 

@@ -6,8 +6,12 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.text.DynamicLayout;
 import android.text.Editable;
 import android.text.InputType;
+import android.text.Layout;
+import android.text.SpannableStringBuilder;
+import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -31,14 +35,15 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
     private Bitmap  mBitmap;
 
+    String test = " ";
+    float testX, testY;
+
     private int firstPointerID = -1;
 
     InputMethodManager imm;
 
     // Designates the tool that is selected
     private int toolFlag;
-
-    String test;
 
     // Tool options
     public static final int DRAW_TOOL = 1;
@@ -55,10 +60,14 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
     // List of actions that have been reversed by undo()
     private ArrayList<Action> undoneActions = new ArrayList<>();
 
+    private ArrayList<DynamicLayout> textLayouts = new ArrayList<>();
+
     // The drawing that is currently being placed / edited
     private Drawing touchedDrawing;
 
     private TextDrawing touchedText;
+
+    DynamicLayout dynamicLayout;
 
     // Previous touch coordinates
     private float prevX, prevY;
@@ -132,9 +141,9 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
         canvas.drawBitmap(mBitmap, 0, 0, null);
 
-        if ( touchedText != null && touchedText.text.length() > 0) {
-            touchedText.getPaint().setTextSize(40f);
-            canvas.drawText(touchedText.text, touchedText.x, touchedText.y, touchedText.getPaint());
+        if ( dynamicLayout != null) {
+            canvas.translate(testX, testY);
+            dynamicLayout.draw(canvas);
         }
 
         // Draw all not-deleted drawings
@@ -268,6 +277,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
                     if (toolFlag == TEXT_TOOL) {
 
+                        testX = x;
+                        testY = y;
                         requestFocus();
                         imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
                         if (imm == null) return false;
@@ -336,7 +347,17 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             // Do Code here
         } else {
-            touchedText.text = " " + event.getDisplayLabel();
+
+            test += Character.toString(event.getDisplayLabel());
+
+            TextPaint textPaint = new TextPaint(selectedPaint);
+
+            textPaint.setTextSize(80);
+
+            SpannableStringBuilder base = new SpannableStringBuilder(Character.toString(event.getDisplayLabel()));
+            dynamicLayout = new DynamicLayout(base, textPaint, base.length(),
+                    Layout.Alignment.ALIGN_NORMAL, 1.0f, 0, true);
+
         }
         return super.onKeyUp(keyCode, event);
     }
