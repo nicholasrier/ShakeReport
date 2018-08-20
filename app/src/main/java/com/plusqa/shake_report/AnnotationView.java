@@ -5,6 +5,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.text.DynamicLayout;
 import android.text.Editable;
@@ -21,11 +22,15 @@ import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 
-public class AnnotationView extends android.support.v7.widget.AppCompatTextView {
+public class AnnotationView extends FrameLayout {
+
+    private TextDrawing currentText;
 
     private Paint selectedPaint;
 
@@ -35,10 +40,44 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
     private Bitmap  mBitmap;
 
+    boolean textRemoved = false;
+
     String test = " ";
     float testX, testY;
 
+    private EditText editText;
+    OnFocusChangeListener onFocusChangeListenerListener = new OnFocusChangeListener() {
+        @Override
+        public void onFocusChange(View v, boolean hasFocus) {
+            if (hasFocus) {
+
+                editText.setText(currentText.getText());
+                editText.setTextColor(currentText.getPaint().getColor());
+
+            } else {
+
+                Rect newRect = new Rect();
+                editText.getDrawingRect(newRect);
+
+                textRemoved = currentText.getText().length() <
+                        editText.getText().toString().length();
+
+                if (textRemoved) {
+                    currentText.reset();
+                    currentText.moveTo(editText.getX(), editText.getY());
+                }
+
+                currentText.lineTo(newRect.right, currentText.getY());
+
+
+
+            }
+        }
+    };
+
     private int firstPointerID = -1;
+
+    ArrayList<TextDrawing> textDrawings =  new ArrayList<>();
 
     InputMethodManager imm;
 
@@ -79,7 +118,7 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
     private ScaleGestureDetector mScaleGestureDetector;
 
     public AnnotationView(Context context) {
-        super(context);
+        this(context, null);
 
         init(context);
 
@@ -112,6 +151,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
         // Default tool
         toolFlag = DRAW_TOOL;
 
+        editText = new EditText(context);
+        editText.setOnFocusChangeListener(onFocusChangeListenerListener);
+        editText.setVisibility(GONE);
+        addView(editText, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+
         mScaleGestureDetector = new ScaleGestureDetector(context,
                 new DrawingScaleListener());
 
@@ -141,17 +185,12 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
         canvas.drawBitmap(mBitmap, 0, 0, null);
 
-        if ( dynamicLayout != null) {
-            canvas.translate(testX, testY);
-            dynamicLayout.draw(canvas);
-        }
-
         // Draw all not-deleted drawings
         for (Drawing drawing : drawings) {
 
             if (!drawing.isDeleted()) {
 
-                canvas.drawPath(drawing, drawing.getPaint());
+                drawing.draw(canvas);
 
             }
         }
@@ -277,12 +316,11 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
                     if (toolFlag == TEXT_TOOL) {
 
-                        testX = x;
-                        testY = y;
-                        requestFocus();
-                        imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                        if (imm == null) return false;
-                        imm.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT);
+                        editText.setX(x);
+                        editText.setY(y);
+                        editText.setVisibility(VISIBLE);
+                        editText.requestFocus();
+                        currentText = (TextDrawing) touchedDrawing;
 
                     }
 
@@ -409,8 +447,8 @@ public class AnnotationView extends android.support.v7.widget.AppCompatTextView 
 
             case TEXT_TOOL:
 
-                touchedText = new TextDrawing(x, y, selectedPaint);
                 touchedDrawing = new TextDrawing(x, y, selectedPaint);
+
         }
 
         drawings.add(touchedDrawing);

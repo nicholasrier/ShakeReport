@@ -1,5 +1,6 @@
 package com.plusqa.shake_report;
 
+import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -164,6 +165,10 @@ public abstract class Drawing extends Path {
 
         clearAdjustment();
 
+    }
+
+    public void draw(Canvas canvas) {
+        canvas.drawPath(this, getPaint());
     }
 
     public void redoDelete() {

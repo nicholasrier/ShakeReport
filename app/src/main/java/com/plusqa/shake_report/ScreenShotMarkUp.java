@@ -208,7 +208,7 @@ public class ScreenShotMarkUp extends AppCompatActivity {
                     boolean doOnce = true;
             @Override
             public void onGlobalLayout() {
-                
+
                 if (doOnce) {
                     fabDelete.hide();
                     doOnce = false;
