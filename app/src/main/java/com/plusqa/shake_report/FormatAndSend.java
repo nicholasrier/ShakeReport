@@ -12,6 +12,8 @@ import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -22,9 +24,15 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
-public class FormatAndSend extends AppCompatActivity {
+import java.util.ArrayList;
+import java.util.List;
+
+public class FormatAndSend extends AppCompatActivity
+        implements ImageRecyclerViewAdapter.ItemClickListener {
 
     InputMethodManager imm;
+    private List<Bitmap> images;
+    private ImageRecyclerViewAdapter adapter;
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
@@ -44,21 +52,17 @@ public class FormatAndSend extends AppCompatActivity {
 
         Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
 
-        ImageView imageView = findViewById(R.id.screenshotPreview);
-        ImageView imageView1 = findViewById(R.id.screenshotPreview1);
-        ImageView imageView2 = findViewById(R.id.screenshotPreview2);
-        ImageView imageView3 = findViewById(R.id.screenshotPreview3);
-        ImageView imageView4 = findViewById(R.id.screenshotPreview4);
-        ImageView imageView5 = findViewById(R.id.screenshotPreview5);
+        images = new ArrayList<>();
+        images.add(screenShotBM); images.add(screenShotBM);images.add(screenShotBM);
 
-        imageView.setImageBitmap(screenShotBM);
-        imageView1.setImageBitmap(screenShotBM);
-        imageView2.setImageBitmap(screenShotBM);
-        imageView3.setImageBitmap(screenShotBM);
-        imageView4.setImageBitmap(screenShotBM);
-        imageView5.setImageBitmap(screenShotBM);
+        RecyclerView recyclerView = findViewById(R.id.previewScroll);
+        LinearLayoutManager horizontalLayoutManager
+                = new LinearLayoutManager(FormatAndSend.this, LinearLayoutManager.HORIZONTAL, false);
+        recyclerView.setLayoutManager(horizontalLayoutManager);
+        adapter = new ImageRecyclerViewAdapter(this, images);
+        adapter.setClickListener(this);
+        recyclerView.setAdapter(adapter);
 
-        String model = Build.MODEL;
         //Tapping outside of fields will clear focus and collapse keyboard
         ConstraintLayout constraintLayout = findViewById(R.id.base_layout);
         constraintLayout.setOnTouchListener(new OnTouchListener() {
@@ -108,4 +112,8 @@ public class FormatAndSend extends AppCompatActivity {
                 height, filter);
     }
 
+    @Override
+    public void onItemClick(View view, int position) {
+
+    }
 }

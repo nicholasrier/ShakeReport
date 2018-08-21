@@ -5,24 +5,23 @@
     android:id="@+id/base_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:focusableInTouchMode="true"
     android:focusable="true"
+    android:focusableInTouchMode="true"
     tools:context=".FormatAndSend">
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/format_and_send_toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="?attr/colorPrimary"
+        android:layout_height="wrap_content"
         android:elevation="4dp"
         android:theme="@style/AppTheme"
         app:contentInsetStartWithNavigation="0dp"
-        app:title="Format Report"
-        app:titleTextColor="@color/color_white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:title="Format Report"
+        app:titleTextColor="@color/color_white">
 
     </android.support.v7.widget.Toolbar>
 
@@ -80,16 +79,16 @@
     </android.support.design.widget.TextInputLayout>
 
     <LinearLayout
+        android:id="@+id/images_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="4dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="8dp"
         android:gravity="start"
-        app:layout_constraintBottom_toTopOf="@id/wrapper"
+        app:layout_constraintBottom_toTopOf="@id/rv_wrapper"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_input_layout2"
-        app:layout_constraintVertical_bias="0.406">
+        app:layout_constraintTop_toBottomOf="@id/text_input_layout2">
 
         <android.support.v7.widget.AppCompatTextView
             android:layout_width="wrap_content"
@@ -98,144 +97,28 @@
             android:textColor="@android:color/darker_gray" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/wrapper"
-        android:layout_width="match_parent"
+    <RelativeLayout
+        android:id="@+id/rv_wrapper"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp"
-        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="32dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="8dp"
         android:background="@android:color/darker_gray"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_input_layout2"
-        app:layout_constraintVertical_bias="0.44">
+        app:layout_constraintTop_toBottomOf="@id/images_label">
 
-        <HorizontalScrollView
+        <android.support.v7.widget.RecyclerView
             android:id="@+id/previewScroll"
             android:layout_width="match_parent"
-            android:layout_height="137dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
-            android:fillViewport="true"
-            android:measureAllChildren="false"
-            android:scrollbars="none">
+            android:layout_height="wrap_content">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
 
-                <LinearLayout
-                    android:id="@+id/imageLayout"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/imageLayout1"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview1"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/imageLayout2"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview2"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/imageLayout3"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview3"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/imageLayout4"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview4"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/imageLayout5"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="8dp"
-                    android:layout_marginEnd="10dp"
-                    android:layout_marginTop="8dp">
-
-                    <android.support.v7.widget.AppCompatImageView
-                        android:id="@+id/screenshotPreview5"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:adjustViewBounds="true"
-                        android:background="@color/colorTransBg"
-                        android:scaleType="centerInside" />
-                </LinearLayout>
-
-            </LinearLayout>
-
-        </HorizontalScrollView>
-    </LinearLayout>
+        </android.support.v7.widget.RecyclerView>
+    </RelativeLayout>
 
     <LinearLayout
         android:id="@+id/fabAddFileLayout"
@@ -247,9 +130,9 @@
         android:clipToPadding="false"
         android:gravity="center_vertical"
         android:padding="@dimen/standard_12"
-        app:layout_constraintBottom_toBottomOf="@+id/wrapper"
+        app:layout_constraintBottom_toBottomOf="@+id/rv_wrapper"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/wrapper">
+        app:layout_constraintTop_toTopOf="@+id/rv_wrapper">
 
 
         <android.support.design.widget.FloatingActionButton
@@ -271,7 +154,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/wrapper"
+        app:layout_constraintTop_toBottomOf="@id/rv_wrapper"
         app:layout_constraintVertical_bias="0.961">
 
         <android.support.v7.widget.AppCompatTextView
