@@ -12,7 +12,8 @@
     <android.support.v7.widget.Toolbar
         android:id="@+id/format_and_send_toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
         android:elevation="4dp"
         android:theme="@style/AppTheme"
         app:contentInsetStartWithNavigation="0dp"
@@ -82,11 +83,9 @@
         android:id="@+id/images_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="28dp"
         android:gravity="start"
-        app:layout_constraintBottom_toTopOf="@id/rv_wrapper"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/text_input_layout2">
 
@@ -99,17 +98,19 @@
 
     <RelativeLayout
         android:id="@+id/rv_wrapper"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
         android:layout_marginBottom="8dp"
-        android:layout_marginEnd="32dp"
+        android:layout_marginEnd="40dp"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:background="@android:color/darker_gray"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/images_label">
+        app:layout_constraintTop_toBottomOf="@id/images_label"
+        app:layout_constraintVertical_bias="0.081">
 
         <android.support.v7.widget.RecyclerView
             android:id="@+id/previewScroll"
@@ -118,6 +119,7 @@
 
 
         </android.support.v7.widget.RecyclerView>
+
     </RelativeLayout>
 
     <LinearLayout
@@ -126,7 +128,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:layout_marginBottom="8dp"
-        android:layout_marginEnd="12dp"
+        android:layout_marginEnd="8dp"
         android:clipToPadding="false"
         android:gravity="center_vertical"
         android:padding="@dimen/standard_12"
@@ -141,6 +143,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:gravity="center_vertical"
+            android:onClick="addPhoto"
             app:backgroundTint="@color/colorPrimary"
             app:fabSize="mini"
             app:srcCompat="@drawable/ic_add_white_24dp" />

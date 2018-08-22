@@ -4,26 +4,39 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Build;
+import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.constraint.ConstraintLayout;
-import android.support.v4.app.NavUtils;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnTouchListener;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
+import android.widget.Toast;
 
+import com.android.volley.NetworkResponse;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.HttpHeaderParser;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,18 +63,26 @@ public class FormatAndSend extends AppCompatActivity
             ab.setDisplayHomeAsUpEnabled(true);
         }
 
-        Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), MainActivity.image_name);
+        Bitmap screenShotBM = Utils.getBitMap(getApplicationContext(), "edited_image");
 
         images = new ArrayList<>();
-        images.add(screenShotBM); images.add(screenShotBM);images.add(screenShotBM);
+
 
         RecyclerView recyclerView = findViewById(R.id.previewScroll);
+
         LinearLayoutManager horizontalLayoutManager
                 = new LinearLayoutManager(FormatAndSend.this, LinearLayoutManager.HORIZONTAL, false);
+
         recyclerView.setLayoutManager(horizontalLayoutManager);
+
         adapter = new ImageRecyclerViewAdapter(this, images);
+
         adapter.setClickListener(this);
+
         recyclerView.setAdapter(adapter);
+
+        images.add(screenShotBM);
+        adapter.notifyItemInserted(images.size());
 
         //Tapping outside of fields will clear focus and collapse keyboard
         ConstraintLayout constraintLayout = findViewById(R.id.base_layout);
@@ -85,7 +106,17 @@ public class FormatAndSend extends AppCompatActivity
         switch (item.getItemId()) {
             // Respond to the action bar's Up/Home button
             case android.R.id.home:
+
                 this.finish();
+
+                return true;
+
+            case R.id.action_send:
+
+                sendReport();
+
+                this.finish();
+
                 return true;
         }
 
@@ -100,20 +131,127 @@ public class FormatAndSend extends AppCompatActivity
         v.clearFocus();
     }
 
-    public static Bitmap scaleDown(Bitmap realImage, float maxImageSize,
-                                   boolean filter) {
-        float ratio = Math.min(
-                (float) maxImageSize / realImage.getWidth(),
-                (float) maxImageSize / realImage.getHeight());
-        int width = Math.round((float) ratio * realImage.getWidth());
-        int height = Math.round((float) ratio * realImage.getHeight());
-
-        return Bitmap.createScaledBitmap(realImage, width,
-                height, filter);
-    }
-
     @Override
     public void onItemClick(View view, int position) {
 
     }
+
+    public void addPhoto(View view) {
+
+        Intent pickPhoto = new Intent(Intent.ACTION_PICK,
+                android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(pickPhoto , 1);
+
+    }
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent imageReturnedIntent) {
+        super.onActivityResult(requestCode, resultCode, imageReturnedIntent);
+        switch(requestCode) {
+            case 0:
+                if(resultCode == RESULT_OK){
+                    Uri selectedImage = imageReturnedIntent.getData();
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
+                        images.add(bitmap);
+                        adapter.notifyItemInserted(images.size());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                break;
+            case 1:
+                if(resultCode == RESULT_OK){
+                    Uri selectedImage = imageReturnedIntent.getData();
+                    try {
+                        Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), selectedImage);
+                        images.add(bitmap);
+                        adapter.notifyItemInserted(images.size());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                break;
+        }
+    }
+
+    private boolean sendReport() {
+
+        //grab log from internal storage
+        String logcatString = Utils.readLogFromInternalMemory(this.getApplicationContext()).toString();
+
+        // Post to server
+        try {
+            RequestQueue requestQueue = Volley.newRequestQueue(this);
+            String URL = "http://172.16.1.170:3001/v1/logs.json";
+            JSONObject jsonBody = new JSONObject();
+            jsonBody.put("Title", "ShakeReport_log");
+            jsonBody.put("Logcat", logcatString);
+            final String requestBody = jsonBody.toString();
+
+            StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    Log.i("VOLLEY", response);
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    Log.e("VOLLEY", error.toString());
+                }
+            }) {
+                @Override
+                public String getBodyContentType() {
+                    return "application/json; charset=utf-8";
+                }
+
+                @Override
+                public byte[] getBody() {
+                    try {
+                        return requestBody == null ? null : requestBody.getBytes("utf-8");
+                    } catch (UnsupportedEncodingException uee) {
+                        VolleyLog.wtf("Unsupported Encoding while trying to get the bytes of %s using %s", requestBody, "utf-8");
+                        return null;
+                    }
+                }
+
+                @Override
+                protected Response<String> parseNetworkResponse(NetworkResponse response) {
+                    String responseString = "";
+
+                    CharSequence text;
+                    Context context = getApplicationContext();
+                    int duration = Toast.LENGTH_SHORT;
+
+                    if (null != response) {
+                        responseString = String.valueOf(response.statusCode);
+                        if (responseString.equals("200")) {
+                            text = "Report Sent!";
+                        } else {
+                            text = "Report did not send: " + responseString;
+                        }
+                    } else {
+                        text = "Report did not send";
+                    }
+                    Toast toast = Toast.makeText(context, text, duration);
+                    toast.show();
+                    return Response.success(responseString, HttpHeaderParser.parseCacheHeaders(response));
+                }
+            };
+
+            requestQueue.add(stringRequest);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        CharSequence text = "Report Sent!";
+        int duration = Toast.LENGTH_SHORT;
+        Context context = getApplicationContext();
+        Toast toast = Toast.makeText(context, text, duration);
+        toast.show();
+
+        return true;
+    }
+
+
 }

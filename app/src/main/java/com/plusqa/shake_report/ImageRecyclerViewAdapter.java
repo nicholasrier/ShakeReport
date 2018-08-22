@@ -23,6 +23,7 @@ public class ImageRecyclerViewAdapter
 
     // data is passed into the constructor
     ImageRecyclerViewAdapter(Context context, List<Bitmap> images) {
+
         this.inflater = LayoutInflater.from(context);
         this.images = images;
     }
@@ -31,14 +32,29 @@ public class ImageRecyclerViewAdapter
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+
         View view = inflater.inflate(R.layout.recyclerview_item, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Bitmap image = images.get(position);
+    public void onBindViewHolder(@NonNull ViewHolder holder, final int position) {
+        final Bitmap image = images.get(position);
         holder.imageView.setImageBitmap(image);
+
+        holder.subtractButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                images.remove(position);
+
+                notifyDataSetChanged();
+
+                notifyItemRemoved(position);
+
+
+            }
+        });
     }
 
     // total number of rows
@@ -46,6 +62,8 @@ public class ImageRecyclerViewAdapter
     public int getItemCount() {
         return images.size();
     }
+
+
 
     // stores and recycles views as they are scrolled off screen
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -57,6 +75,7 @@ public class ImageRecyclerViewAdapter
             imageView = itemView.findViewById(R.id.rv_item_image);
             subtractButton = itemView.findViewById(R.id.subtract_button);
             itemView.setOnClickListener(this);
+
         }
 
         @Override
@@ -64,6 +83,7 @@ public class ImageRecyclerViewAdapter
             if (clickListener != null) clickListener.onItemClick(view, getAdapterPosition());
         }
     }
+
 
     // convenience method for getting data at click position
     public Bitmap getItem(int id) {

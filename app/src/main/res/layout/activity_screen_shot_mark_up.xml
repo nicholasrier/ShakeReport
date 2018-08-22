@@ -275,7 +275,7 @@
             android:backgroundTint="@color/color_white"
             app:fabSize="mini"
             app:borderWidth="0dp"
-            app:srcCompat="@drawable/ic_outline_delete_outline_24px" />
+            app:srcCompat="@drawable/ic_outline_delete_24px" />
     </LinearLayout>
 
 

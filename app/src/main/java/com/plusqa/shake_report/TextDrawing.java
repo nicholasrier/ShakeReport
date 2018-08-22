@@ -19,8 +19,6 @@ public class TextDrawing extends Drawing {
     TextDrawing(float x, float y, Paint paint) {
         super(x, y, paint);
 
-        layout = new DynamicLayout("a", new TextPaint(paint), 1, Layout.Alignment.ALIGN_NORMAL, 1, 1, true);
-
         RectF rectF = new RectF();
         super.setRectF(rectF);
     }

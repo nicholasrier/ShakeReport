@@ -7,13 +7,11 @@ import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.content.Intent;
-import java.io.File;
 import android.graphics.Rect;
 import android.graphics.Point;
-import android.util.Log;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,6 +23,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -32,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
         if (mSensorManager != null) {
             mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
+
         mShakeDetector = new ShakeDetector();
         mShakeDetector.setOnShakeListener(new ShakeDetector.OnShakeListener() {
 
@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
             public void onShake(int count) {
                 handleShakeEvent();
             }
+
             private void handleShakeEvent() {
 
                 // Save the logCat internally
@@ -54,13 +55,20 @@ public class MainActivity extends AppCompatActivity {
                 android.view.View view = getWindow().getDecorView();
                 view.setDrawingCacheEnabled(true);
                 view.buildDrawingCache();
+
                 Bitmap b1 = view.getDrawingCache();
+
                 Rect frame = new Rect();
                 getWindow().getDecorView().getWindowVisibleDisplayFrame(frame);
+
                 int statusBarHeight = frame.top;
+
                 Point size = new Point();
+
                 getWindowManager().getDefaultDisplay().getSize(size);
+
                 Bitmap b = Bitmap.createBitmap(b1, 0, statusBarHeight, size.x, size.y - statusBarHeight);
+
                 view.destroyDrawingCache();
 
                 // Save bitmap to internal memory
@@ -77,12 +85,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onResume() {
+
         super.onResume();
         mSensorManager.registerListener(mShakeDetector, mAccelerometer,	SensorManager.SENSOR_DELAY_UI);
     }
 
     @Override
     public void onPause() {
+
         mSensorManager.unregisterListener(mShakeDetector);
         super.onPause();
     }
